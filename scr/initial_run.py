@@ -74,6 +74,9 @@ def create_dist_matrix(df):
     dist_matrix = squareform(dist)
     dist_df = pd.DataFrame(dist_matrix, index=names, columns=names)
     
+    # create folder
+    os.makedirs("1_dist_matrix", exist_ok=True)
+    
     # save the distance matrix to a pickle file
     dist_df.to_pickle("1_dist_matrix/eucl_dist.pkl")
     
