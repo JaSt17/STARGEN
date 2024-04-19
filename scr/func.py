@@ -22,12 +22,27 @@ def calc_neighbor_dist(hexagons, dist_matrix, time_bin_df, hex_col, k_neighbors 
     # initialize the cache for the average distances
     avg_dist_cache = {}
 
-    # iterate over each hexagon
     for hexagon in hexagons:
         neighbors = set()
         # get the neighbors of the hexagon in k distance
-        for k in range (1, k_neighbors+1):
-            neighbors.update(h for h in h3.k_ring_distances(hexagon, k)[k] if h in hexagons_set)
+        for k in range(1, k_neighbors+1):
+            if k == 1:
+                neighbors.update([h for h in h3.k_ring_distances(hexagon, k)[k] if h in hexagons_set])
+            else:
+                # check if the we have already found a neighor between the hexagon and the new neighbor
+                potential_neighbors = [h for h in h3.k_ring_distances(hexagon, k)[k] if h in hexagons_set]
+                for n in potential_neighbors:
+                    try:
+                        if h3.h3_line(hexagon, n) is None:
+                            continue
+                        if any(h in neighbors for h in h3.h3_line(n, hexagon)):
+                            continue
+                    except:
+                        pass
+                    if any(h in h3.k_ring(n, k) for h in neighbors):
+                        continue
+                    neighbors.update([n])
+            
         # if there are no neighbors in k distance, and the user allows for more than k distance, get the neighbors in 20 distance
         if allow_k_distance and len(neighbors) == 0:
             k = k_neighbors + 1

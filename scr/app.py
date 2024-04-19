@@ -93,7 +93,6 @@ if 'setup_done' not in st.session_state:
         
 # Once setup is done, show the map and time bin selection 
 if 'setup_done' in st.session_state and st.session_state['setup_done']:
-    st.set_page_config(layout="wide")    
     # Return to Home button
     if st.sidebar.button('Return to Home', key='home'):
         clear_state()
@@ -139,15 +138,15 @@ if 'setup_done' in st.session_state and st.session_state['setup_done']:
     # set an initial map state if it does not exist
     if 'map_state' not in st.session_state:
         st.session_state['map_state'] = {
-            "lat": 42.721,
-            "lon": 44.756,
-            "zoom": 4
+            "lat": 42.0,
+            "lon": 44.75,
+            "zoom": 2
         }
     st.sidebar.write("You can change the default latitude, longitude, and zoom level.")
     # text input where the user can enter the latitude between -90 and 90
-    st.session_state['map_state']['lat'] = st.sidebar.slider('Enter latitude:', -90.0, 90.0, st.session_state['map_state']['lat'])
+    st.session_state['map_state']['lat'] = st.sidebar.number_input('Enter latitude:', -90.0, 90.0, step=0.01, value=st.session_state['map_state']['lat'])
     # text input where the user can enter the longitude between -180 and 180
-    st.session_state['map_state']['lon'] = st.sidebar.slider('Enter longitude:', -180.0, 180.0, st.session_state['map_state']['lon'])
+    st.session_state['map_state']['lon'] = st.sidebar.number_input('Enter longitude:', -180.0, 180.0, step=0.01, value=st.session_state['map_state']['lon'])
     # slider to choose the zoom level of the map
     st.session_state['map_state']['zoom'] = st.sidebar.slider('Choose zoom level:', 1, 15, st.session_state['map_state']['zoom'])
 
