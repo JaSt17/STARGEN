@@ -33,13 +33,11 @@ def calc_neighbor_dist(hexagons, dist_matrix, time_bin_df, hex_col, k_neighbors 
                 potential_neighbors = [h for h in h3.k_ring_distances(hexagon, k)[k] if h in hexagons_set]
                 for n in potential_neighbors:
                     try:
-                        if h3.h3_line(hexagon, n) is None:
-                            continue
                         if any(h in neighbors for h in h3.h3_line(n, hexagon)):
                             continue
                     except:
                         pass
-                    if any(h in h3.k_ring(n, k) for h in neighbors):
+                    if any(h in h3.k_ring(n, 2) for h in neighbors):
                         continue
                     neighbors.update([n])
             
