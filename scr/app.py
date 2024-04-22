@@ -36,9 +36,9 @@ if 'setup_done' not in st.session_state:
         st.title('GeoGenTrack')
     
     # Slider to choose the number of time bins and button to get information about it
-    time_bins = st.slider('Select a number of time bins', 1, 30, 10, 1)
+    time_bins = st.slider('Select a number of time bins', 1, 30, 18, 1)
     # Checkbox to enable same time bin length
-    same_age_range = st.checkbox('Same age range for each time bin', value=False)
+    same_age_range = st.checkbox('Same age range for each time bin', value=True)
 
     # show the user the current time span for each time bin give the number of time bins
     if same_age_range:
@@ -53,16 +53,14 @@ if 'setup_done' not in st.session_state:
         """)
     
     # Slider to choose the resolution and button to get information about it
-    resolution = st.slider('Select a resolution', 0, 5, 2, 1)
+    resolution = st.slider('Select a resolution', 0, 5, 3, 1)
     
     # button to get information about resolution
     if st.button("Information about resolution"):
         st.table(get_resolution_data())
 
     # Checkbox to allow expanding the search area and button to get information about it
-    allow_k_distance = st.checkbox('Expand Search Area', value=False)
-    
-    k_neighbors = st.slider('Select the number of neighbors to search', 1, 10, 1, 1)
+    allow_k_distance = st.checkbox('Expand Search Area', value=True)
     
     # button to get information about expanding search area
     if st.button("Information about search area & neighbors"):
@@ -70,8 +68,6 @@ if 'setup_done' not in st.session_state:
     As the resolution increases, the size of each hexagon decreases, resulting in a reduced likelihood of adjacent hexagons being direct neighbors. 
     To ensure visibility between closely situated hexagons, users are encouraged to utilize the "Expand Search Area" option.
     When activated, this feature systematically searches through hexagons at greater distances until a neighboring hexagon is identified.
-    The number of neighbors to search can be adjusted using the slider above. The default value is 1. If we increase the number of neighbors to search,
-    the tool will search for more neighbors until reacing the selected neighborhood instead of stoping when the first neighbor is found.
     """)
     
     # Button to run the tool
@@ -84,7 +80,6 @@ if 'setup_done' not in st.session_state:
         st.session_state['resolution'] = resolution
         st.session_state['same_age_range'] = st.session_state['same_age_range']
         st.session_state['allow_k_distance'] = allow_k_distance
-        st.session_state['k_neighbors'] = k_neighbors
         # read the distance matrix from the file
         # get path to the distance matrix
         path_to_matrix = os.getcwd()+"/1_dist_matrix/eucl_dist.pkl"
@@ -97,15 +92,24 @@ if 'setup_done' in st.session_state and st.session_state['setup_done']:
     if st.sidebar.button('Return to Home', key='home'):
         clear_state()
         st.rerun()
+        
+    # initialize the neighborhood size for the distance calculation
+    if 'neighborhood_size' not in st.session_state:
+        st.session_state['neighborhood_size'] = 1
 
     # Load the data with the given number of time bin and hexagon resolution
-    df = label_samples(os.getcwd(),st.session_state['time_bins'],st.session_state['resolution'], st.session_state['same_age_range'])
+    if 'df' not in st.session_state:
+        st.session_state['df'] = label_samples(os.getcwd(),st.session_state['time_bins'],st.session_state['resolution'], st.session_state['same_age_range'])
+    df = st.session_state['df']
+    
     # rename the time bins to a more readable format
     time_bins = rename_time_bins(df)
+
     # get the hexagons for each time bin
     time_bins_hexagons = get_time_bin_hexagons(df)
+    
     # calculate the average distances between neighboring hexagons for each time bin
-    time_bins_dist = calc_dist_time_bin(df, st.session_state['matrix'], st.session_state['k_neighbors'] , st.session_state['allow_k_distance'])
+    time_bins_dist = calc_dist_time_bin(df, st.session_state['matrix'], st.session_state['neighborhood_size'] , st.session_state['allow_k_distance'])
     
     # dropdown to select time bins
     selected_time_bin = st.sidebar.selectbox("Time Bin", options=time_bins)
@@ -149,6 +153,17 @@ if 'setup_done' in st.session_state and st.session_state['setup_done']:
     st.session_state['map_state']['lon'] = st.sidebar.number_input('Enter longitude:', -180.0, 180.0, step=0.01, value=st.session_state['map_state']['lon'])
     # slider to choose the zoom level of the map
     st.session_state['map_state']['zoom'] = st.sidebar.slider('Choose zoom level:', 1, 15, st.session_state['map_state']['zoom'])
+    
+    # initialize the neighborhood size for the distance calculation
+    if 'neighborhood_size' not in st.session_state:
+        st.session_state['neighborhood_size'] = 1
+        
+    # Slider to choose the neighborhood size for the distance calculation
+    st.session_state['neighborhood_size'] = st.sidebar.slider('Choose neighborhood size:', 1, 10, st.session_state['neighborhood_size'])
+    
+    if button := st.sidebar.button('What is the neighborhood size?'):
+        st.write("""    The number of neighbors to search can be adjusted using the slider above. The default value is 1. If we increase the number of neighbors to search,
+    the tool will search for more neighbors until reacing the selected neighborhood instead of stoping when the first neighbor is found.""")
 
     if 'map_state' in st.session_state:
         lat, lon, zoom = st.session_state['map_state'].values()

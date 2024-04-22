@@ -37,7 +37,7 @@ def calc_neighbor_dist(hexagons, dist_matrix, time_bin_df, hex_col, k_neighbors 
                             continue
                     except:
                         pass
-                    if any(h in h3.k_ring(n, 2) for h in neighbors):
+                    if any(h in h3.k_ring(n, 1) for h in neighbors):
                         continue
                     neighbors.update([n])
             
