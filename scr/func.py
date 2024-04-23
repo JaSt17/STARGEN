@@ -12,7 +12,7 @@ def read_df(path):
 def calc_avg_dist(samples_hex1, samples_hex2, dist_matrix):
     return dist_matrix.loc[samples_hex1, samples_hex2].values.flatten().mean()
 
-def calc_neighbor_dist(hexagons, dist_matrix, time_bin_df, hex_col, k_neighbors = 1, allow_k_distance=False):
+def calc_neighbor_dist(hexagons, dist_matrix, time_bin_df, hex_col, k_neighbors = 1, allow_k_distance=False, scale_by_distance=False):
     # get the samples in each hexagon
     samples_in_hex = time_bin_df.groupby(hex_col)['ID'].apply(list).to_dict()
     # initialize the dictionary to store the average distances between neighboring hexagons
@@ -23,46 +23,57 @@ def calc_neighbor_dist(hexagons, dist_matrix, time_bin_df, hex_col, k_neighbors 
     avg_dist_cache = {}
 
     for hexagon in hexagons:
-        neighbors = set()
+        neighbors = dict()
         # get the neighbors of the hexagon in k distance
         for k in range(1, k_neighbors+1):
             if k == 1:
-                neighbors.update([h for h in h3.k_ring_distances(hexagon, k)[k] if h in hexagons_set])
+                neighbors[k] = set(h for h in h3.k_ring_distances(hexagon, k)[k] if h in hexagons_set)
             else:
                 # check if the we have already found a neighor between the hexagon and the new neighbor
                 potential_neighbors = [h for h in h3.k_ring_distances(hexagon, k)[k] if h in hexagons_set]
-                for n in potential_neighbors:
+                for n in potential_neighbors:  # check if we want to add the neighbor
+                    # check if there is already a neighbor between this hexagon and the new potential neighbor
                     try:
                         if any(h in neighbors for h in h3.h3_line(n, hexagon)):
                             continue
                     except:
                         pass
-                    if any(h in h3.k_ring(n, 1) for h in neighbors):
+                    # check if the potential neighbor is a neighbor of a neighbor of the hexagon
+                    if any(h in h3.k_ring(n, 1) for h in neighbors[k-1]):
+                        # remove the potential neighbor from the list
                         continue
-                    neighbors.update([n])
+                    neighbors[k] = set(h for h in h3.k_ring_distances(hexagon, k)[k] if h in hexagons_set)
             
         # if there are no neighbors in k distance, and the user allows for more than k distance, get the neighbors in 20 distance
-        if allow_k_distance and len(neighbors) == 0:
+        if allow_k_distance and [len(neighbors[k]) for k in neighbors].count(0) == len(neighbors):
             k = k_neighbors + 1
-            while len(neighbors) == 0 and k < 20:
-                neighbors.update(h for h in h3.k_ring_distances(hexagon, k)[k] if h in hexagons_set)
+            while [len(neighbors[k]) for k in neighbors].count(0) == len(neighbors) and k < 20:
+                neighbors[k] = set(h for h in h3.k_ring_distances(hexagon, k)[k] if h in hexagons_set)
                 k += 1
+                
         # calculate the average distance between the hexagon and its neighbors
-        for neighbor in neighbors:
-            Ids_in_hexagon = samples_in_hex.get(hexagon, [])
-            Ids_in_neighbor = samples_in_hex.get(neighbor, [])
-            # get the pair of hexagons
-            pair = frozenset([hexagon, neighbor])
+        for k in neighbors.keys():
+            for neighbor in neighbors[k]:
+                Ids_in_hexagon = samples_in_hex.get(hexagon, [])
+                Ids_in_neighbor = samples_in_hex.get(neighbor, [])
+                # get the pair of hexagons
+                pair = frozenset([hexagon, neighbor])
 
-            if pair not in avg_dist_cache:
-                avg_dist_cache[pair] = calc_avg_dist(Ids_in_hexagon, Ids_in_neighbor, dist_matrix)
-
-            averages[pair] = round(avg_dist_cache[pair], 2)
+                # check if the average distance has already been calculated
+                if pair not in avg_dist_cache:
+                    # calculate the average distance between the hexagon and its neighbor
+                    distance = calc_avg_dist(Ids_in_hexagon, Ids_in_neighbor, dist_matrix)
+                    # scale the distance by the distance between the hexagon and its neighbor
+                    if scale_by_distance:
+                        distance = distance / (0.9 + k/10)
+                    avg_dist_cache[pair] = distance
+                    
+                averages[pair] = round(avg_dist_cache[pair], 2)
 
     return averages
 
 # this function calculates the average distance between the each hexagon and its neighbors for each time bin
-def calc_dist_time_bin(df, dist_matrix=None, k_neighbors=1, allow_k_distance=False):
+def calc_dist_time_bin(df, dist_matrix=None, k_neighbors=1, allow_k_distance=False, scale_by_distance=False):
     
     # get column name for the hexagons (it should be the only column with 'hex' in the name)
     hex_col = str(df.columns[df.columns.str.contains('hex')][0])
@@ -85,7 +96,7 @@ def calc_dist_time_bin(df, dist_matrix=None, k_neighbors=1, allow_k_distance=Fal
         hexagons = time_bin_df[hex_col].unique()
         
         # Calculate the average distance for each hexagon to its neighbors within the current time bin.
-        average_distances = calc_neighbor_dist(hexagons, dist_matrix, time_bin_df, hex_col, k_neighbors, allow_k_distance)
+        average_distances = calc_neighbor_dist(hexagons, dist_matrix, time_bin_df, hex_col, k_neighbors, allow_k_distance, scale_by_distance)
 
         # Append the calculated average distances to the dictionary, using the time bin label as the key.
         averages.update({bin_label: average_distances})

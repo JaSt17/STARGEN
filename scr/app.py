@@ -93,9 +93,10 @@ if 'setup_done' in st.session_state and st.session_state['setup_done']:
         clear_state()
         st.rerun()
         
-    # initialize the neighborhood size for the distance calculation
+    # initialize the neighborhood size for the distance calculation and the scale by distance
     if 'neighborhood_size' not in st.session_state:
         st.session_state['neighborhood_size'] = 1
+        st.session_state['scale_by_distance'] = False
         
     @st.cache_data
     def load_data():
@@ -112,20 +113,29 @@ if 'setup_done' in st.session_state and st.session_state['setup_done']:
         return get_time_bin_hexagons(df)
     time_bins_hexagons = load_hexagons()
 
-    # calculate the average distances between neighboring hexagons for each time bin
-    time_bins_dist = calc_dist_time_bin(df, st.session_state['matrix'], st.session_state['neighborhood_size'] , st.session_state['allow_k_distance'])
-    
     # dropdown to select time bins
     selected_time_bin = st.sidebar.selectbox("Time Bin", options=time_bins)
-
-    # get the hexagons and distance values for the selected time bin
-    hexagons = time_bins_hexagons[selected_time_bin]
-    time_bin = time_bins_dist[selected_time_bin]
     
     # checkbox for normalizing distance values
     if st.sidebar.checkbox("Normalize distances", value=False):
         # normalize the distance values
         time_bin = normalize_distances(time_bin)
+        
+    # checkbox for scaling the distance values by the distance
+    if st.sidebar.checkbox("Scale distances by distance", value=False):
+        st.session_state['scale_by_distance'] = True
+    else:
+        st.session_state['scale_by_distance'] = False
+        
+    # calculate the average distances between neighboring hexagons for each time bin with the given parameters
+    time_bins_dist = calc_dist_time_bin(df, st.session_state['matrix'],
+                                        st.session_state['neighborhood_size'] ,
+                                        st.session_state['allow_k_distance'],
+                                        st.session_state['scale_by_distance'])
+
+    # get the hexagons and distance values for the selected time bin
+    hexagons = time_bins_hexagons[selected_time_bin]
+    time_bin = time_bins_dist[selected_time_bin]
     
     # get min and max distance for the selected time bin for the threshold
     min_dist, max_dist = get_min_max_dist(time_bin)
@@ -166,7 +176,7 @@ if 'setup_done' in st.session_state and st.session_state['setup_done']:
     st.session_state['neighborhood_size'] = st.sidebar.slider('Choose neighborhood size:', 1, 10, st.session_state['neighborhood_size'])
     
     if button := st.sidebar.button('What is the neighborhood size?'):
-        st.write("""    The number of neighbors to search can be adjusted using the slider above. The default value is 1. If we increase the number of neighbors to search,
+        st.write("""The number of neighbors to search can be adjusted using the slider above. The default value is 1. If we increase the number of neighbors to search,
     the tool will search for more neighbors until reacing the selected neighborhood instead of stoping when the first neighbor is found.""")
 
     if 'map_state' in st.session_state:
@@ -178,9 +188,6 @@ if 'setup_done' in st.session_state and st.session_state['setup_done']:
         
     # draw all average distance values between neighboring hexagons for the chosen time bin
     m = draw_all_boarders_for_time_bin(time_bin, m, threshold=st.session_state['threshold'])
-    # add colorbar to the map
-    m = add_colorbar_to_map(m, os.getcwd()+"/img/colorbar.png")
-
     # Display the current time bin and chosen threshold on top the map
     st.markdown(f"<h1 style='text-align: center; font-size: 20px;'>Time Bin: {selected_time_bin}</h1>", unsafe_allow_html=True)
     # Display the map in Streamlit
