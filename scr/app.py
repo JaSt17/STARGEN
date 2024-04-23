@@ -96,18 +96,22 @@ if 'setup_done' in st.session_state and st.session_state['setup_done']:
     # initialize the neighborhood size for the distance calculation
     if 'neighborhood_size' not in st.session_state:
         st.session_state['neighborhood_size'] = 1
-
-    # Load the data with the given number of time bin and hexagon resolution
-    if 'df' not in st.session_state:
-        st.session_state['df'] = label_samples(os.getcwd(),st.session_state['time_bins'],st.session_state['resolution'], st.session_state['same_age_range'])
-    df = st.session_state['df']
+        
+    @st.cache_data
+    def load_data():
+        return label_samples(os.getcwd(),st.session_state['time_bins'],st.session_state['resolution'], st.session_state['same_age_range'])
+    df = load_data()
     
-    # rename the time bins to a more readable format
-    time_bins = rename_time_bins(df)
-
-    # get the hexagons for each time bin
-    time_bins_hexagons = get_time_bin_hexagons(df)
+    @st.cache_data
+    def load_time_bins():
+        return rename_time_bins(df)
+    time_bins = load_time_bins()
     
+    @st.cache_data
+    def load_hexagons():
+        return get_time_bin_hexagons(df)
+    time_bins_hexagons = load_hexagons()
+
     # calculate the average distances between neighboring hexagons for each time bin
     time_bins_dist = calc_dist_time_bin(df, st.session_state['matrix'], st.session_state['neighborhood_size'] , st.session_state['allow_k_distance'])
     
