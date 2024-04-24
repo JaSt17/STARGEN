@@ -7,7 +7,7 @@ import base64
 
 
 # function that draws hexagons on a map
-def draw_hexagons(hexagons, m=None, color='orange', zoom_start=1):
+def draw_hexagons(hexagons, m=None, color='orange', zoom_start=1, value=None):
     # Create a map if it is not provided
     if m is None:
         m = folium.Map(location=(0.0, 0.0), tiles="Esri worldstreetmap", zoom_start=zoom_start)
@@ -41,13 +41,47 @@ def draw_hexagons(hexagons, m=None, color='orange', zoom_start=1):
         # split the hexagon if it crosses the antimeridian
         parts = split_hexagon_if_needed(hexagon)
         for part in parts:
-            folium.Polygon(
+            polygon = folium.Polygon(
                 locations=part,
                 weight=1,
-                color=color,
-                fill_opacity=0.2,
+                color=None,
+                fill_color=color,
+                fill_opacity=0.4,
                 fill=True
-            ).add_to(m)
+            )
+            if value:
+                polygon.add_child(folium.Tooltip(value))
+            
+            polygon.add_to(m)
+    return m
+
+def draw_hexagons_with_values(hex_dict, m=None, zoom_start=1, threshold=0.0):
+    hexagons = hex_dict.keys()
+    values = hex_dict.values()
+    
+    # create a color gradient to color the lines based on the normalized distance
+    colors = [(1, 0.2, 0), (0, 0, 0.5)]  # Dark blue to orange
+    cmap = mcolors.LinearSegmentedColormap.from_list("custom_darkblue_to_orange", colors)
+
+    # write the values to the center of each hexagon
+    for hexagon, value in zip(hexagons, values):
+        col = mcolors.to_hex(cmap(value))
+        m = draw_hexagons([hexagon], m, color=col, zoom_start=zoom_start, value=value)
+    return m
+
+def draw_barriers(barriers_dict, m=None, zoom_start=1, threshold=0.0):
+    barriers = barriers_dict.keys()
+    values = barriers_dict.values()
+    
+    colors = [(1, 0.2, 0, 0.2), (0, 0, 0.5, 0.2)]  # Dark blue to orange with reduced opacity
+    cmap = mcolors.LinearSegmentedColormap.from_list("custom_darkblue_to_orange", colors)
+    
+    for barrier, value in zip(barriers, values):
+        col = mcolors.to_hex(cmap(value))
+        barrier = list(barrier)
+        polyline = folium.PolyLine(barrier, color = col)
+        polyline.add_child(folium.Tooltip(value))
+        polyline.add_to(m)
     return m
 
 # this function takes two hexagons and a map and draws a line between the two midpoints of the hexagons
@@ -98,44 +132,4 @@ def draw_all_boarders_for_time_bin(time_bin, m, color="red", threshold=0.0):
             col = mcolors.to_hex(cmap(normalized_time_bin[pair]))
             hex1, hex2 = list(pair)
             m = draw_borders(hex1, hex2, m, color= col, distance=time_bin[pair])
-    return m
-
-# this function adds a colorbar to the map
-def add_colorbar_to_map(m, path):
-
-    # Open the image file in binary mode
-    with open(path, 'rb') as image_file:
-        # Read the binary image data
-        binary_data = image_file.read()
-        # Encode the binary data to base64
-        base64_encoded_data = base64.b64encode(binary_data)
-        # Decode the base64 bytes to string
-        base64_image = base64_encoded_data.decode('utf-8')
-
-    # JavaScript to add the colorbar to the map
-    js = f"""
-    <script>
-    function addColorBar() {{
-        var colorBarDiv = L.DomUtil.create('div', 'leaflet-control');
-        colorBarDiv.style.backgroundColor = 'white';
-        colorBarDiv.style.padding = '5px';
-        colorBarDiv.innerHTML = '<img src="data:image/png;base64,{base64_image}">';
-
-        var zoomControlContainer = document.getElementsByClassName('leaflet-control-zoom')[0].parentNode;
-        if (zoomControlContainer.firstChild) {{
-            zoomControlContainer.insertBefore(colorBarDiv, zoomControlContainer.firstChild);
-        }} else {{
-            zoomControlContainer.appendChild(colorBarDiv);
-        }}
-    }}
-
-    document.addEventListener('DOMContentLoaded', function() {{
-        addColorBar();
-    }});
-    </script>
-    """
-    # Adding the JavaScript to the map
-    element = Element(js)
-    m.get_root().html.add_child(element)
-    
     return m

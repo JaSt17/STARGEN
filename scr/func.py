@@ -39,9 +39,10 @@ def calc_neighbor_dist(hexagons, dist_matrix, time_bin_df, hex_col, k_neighbors 
                     except:
                         pass
                     # check if the potential neighbor is a neighbor of a neighbor of the hexagon
-                    if any(h in h3.k_ring(n, 1) for h in neighbors[k-1]):
+                    if k-1 in neighbors and neighbors[k-1]:
+                        if any(h in h3.k_ring(n, 1) for h in neighbors[k-1]):
                         # remove the potential neighbor from the list
-                        continue
+                            continue
                     neighbors[k] = set(h for h in h3.k_ring_distances(hexagon, k)[k] if h in hexagons_set)
             
         # if there are no neighbors in k distance, and the user allows for more than k distance, get the neighbors in 20 distance
