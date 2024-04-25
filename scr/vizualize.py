@@ -60,7 +60,7 @@ def draw_hexagons_with_values(hex_dict, m=None, zoom_start=1, threshold=0.0):
     values = hex_dict.values()
     
     # create a color gradient to color the lines based on the normalized distance
-    colors = [(1, 0.2, 0), (0, 0, 0.5)]  # Dark blue to orange
+    colors = [(1, 0.5, 0), (0, 0, 0.5)]  # Dark blue to orange
     cmap = mcolors.LinearSegmentedColormap.from_list("custom_darkblue_to_orange", colors)
 
     # write the values to the center of each hexagon
@@ -73,7 +73,7 @@ def draw_barriers(barriers_dict, m=None, zoom_start=1, threshold=0.0):
     barriers = barriers_dict.keys()
     values = barriers_dict.values()
     
-    colors = [(1, 0.2, 0, 0.2), (0, 0, 0.5, 0.2)]  # Dark blue to orange with reduced opacity
+    colors = [(1, 0.5, 0, 0.2), (0, 0, 0.5, 0.2)]  # Dark blue to orange with reduced opacity
     cmap = mcolors.LinearSegmentedColormap.from_list("custom_darkblue_to_orange", colors)
     
     for barrier, value in zip(barriers, values):
