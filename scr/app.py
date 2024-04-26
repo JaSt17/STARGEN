@@ -103,35 +103,43 @@ if 'setup_done' in st.session_state and st.session_state['setup_done']:
     # dropdown to select time bins
     selected_time_bin = st.selectbox("Time Bin", options=time_bins)
     if 'selected_time_bin_id' not in st.session_state:
-        st.session_state['selected_time_bin_id'] = 0
+        st.session_state['selected_time_bin_id'] = 1
     new_selected_time_bin_id = time_bins.index(selected_time_bin)
 
     # get the hexagons and distance values for the selected time bin
     hexagons = time_bins_hexagons[selected_time_bin]
+    # get the distance values for the selected time bin
     time_bin = st.session_state['time_bins_dist'][selected_time_bin]
     # normalize the distances for each timebin
     time_bin = normalize_distances(time_bin)
     
-    # initialize the threshold with the minimum distance value
+    # initialize the threshold for the distance values to display and the threshold for isolated populations
     if 'threshold' not in st.session_state:
         st.session_state['threshold'] = 0.0
         st.session_state['isolated_threshold'] = 0.4
         
     # Slider to choose the threshold for the distant values which should be displayed
-    st.session_state['threshold'] = st.sidebar.slider('Which distances should be displayed ?:', 0.0, 1.0, st.session_state['threshold'], 0.01)
+    st.session_state['threshold'] = st.sidebar.slider('Which distances should be displayed ?:',
+                                                        0.0, 1.0, st.session_state['threshold'], 0.01)
     
     # Slider to chose the threshold for isolated populations
-    new_isolated_threshold = st.sidebar.slider('Which distances are considered as isolated populations ?:', 0.0, 1.0, st.session_state['isolated_threshold'], 0.01)
+    new_isolated_threshold = st.sidebar.slider('Which distances are considered as isolated populations ?:',
+                                                0.0, 1.0, st.session_state['isolated_threshold'], 0.01)
     
-    # get the isolated hexagons and barriers for the selected time bin
-    isolated_hex, barrier_lines, barrier_hex = get_isolated_hex_and_barriers(time_bin, hexagons,  st.session_state['isolated_threshold'])
-    
-    # check if the threshold has changed
-    if new_isolated_threshold != st.session_state['isolated_threshold'] or new_selected_time_bin_id != st.session_state['selected_time_bin_id'] or 'closest_populations' not in st.session_state:
+    # check if the threshold or the selected time bin has changed
+    if new_isolated_threshold != st.session_state['isolated_threshold'] or new_selected_time_bin_id != st.session_state['selected_time_bin_id']:
         # get the isolated hexagons and barriers for the selected time bin
+        st.session_state['isolated_hex'], st.session_state['barrier_lines'], st.session_state['barrier_hex'] = get_isolated_hex_and_barriers(time_bin, hexagons, st.session_state['isolated_threshold'])
+        # change the threshold for isolated populations
         st.session_state['isolated_threshold'] = new_isolated_threshold
-        isolated_hex, barrier_lines, barrier_hex = get_isolated_hex_and_barriers(time_bin, hexagons,  st.session_state['isolated_threshold'])
-        st.session_state['closest_populations'], st.session_state['isolated_hex'] = find_closest_population(st.session_state['df'], st.session_state['selected_time_bin_id'], isolated_hex, st.session_state['matrix'], st.session_state['isolated_threshold'])
+        # change the selected time bin id
+        st.session_state['selected_time_bin_id'] = new_selected_time_bin_id
+        # find the closest populations for the isolated hexagons
+        st.session_state['closest_populations'], st.session_state['isolated_hex'] = find_closest_population(st.session_state['df'],
+                                                                                                            st.session_state['selected_time_bin_id'],
+                                                                                                            st.session_state['isolated_hex'],
+                                                                                                            st.session_state['matrix'],
+                                                                                                            st.session_state['isolated_threshold'])
     
     if st.sidebar.checkbox("Show possible migration routes", False):
         st.session_state['show_migration'] = True
@@ -143,9 +151,9 @@ if 'setup_done' in st.session_state and st.session_state['setup_done']:
         st.session_state['map_state'] = {
             "lat": 42.0,
             "lon": 44.75,
-            "zoom": 2
+            "zoom": 1
         }
-    st.sidebar.write("Specify a Map Window:")
+    st.sidebar.write("Specify a default window for the map:")
     # text input where the user can enter the latitude between -90 and 90
     st.session_state['map_state']['lat'] = st.sidebar.number_input('Enter latitude:', -90.0, 90.0, step=0.01, value=st.session_state['map_state']['lat'])
     # text input where the user can enter the longitude between -180 and 180
@@ -153,19 +161,20 @@ if 'setup_done' in st.session_state and st.session_state['setup_done']:
     # slider to choose the zoom level of the map
     st.session_state['map_state']['zoom'] = st.sidebar.slider('Choose zoom level:', 1, 15, st.session_state['map_state']['zoom'])
         
-    if 'map_state' in st.session_state:
-        lat, lon, zoom = st.session_state['map_state'].values()
-        m = folium.Map(location=(lat, lon), tiles="Esri worldstreetmap", zoom_start=zoom)
-        m = draw_hexagons(hexagons, m, zoom_start=zoom)
-    else:
-        m = draw_hexagons(hexagons)
+    # get the specifyed map state
+    lat, lon, zoom = st.session_state['map_state'].values()
+    m = folium.Map(location=(lat, lon), tiles="Esri worldstreetmap", zoom_start=zoom)
+    # draw all hexagons for the selected time bin which hold the samples
+    m = draw_hexagons(hexagons, m, zoom_start=zoom)
+    # check if the migration routes should be displayed
     if st.session_state['show_migration']:
         # draw the migration lines for the isolated hexagons
         m = draw_migration_for_time_bin(st.session_state['closest_populations'], m)
     # highlight the isolated hexagons in red that can not be explained by migration
-    m = draw_hexagons(st.session_state['isolated_hex'], m, color='red', zoom_start=zoom, opacity=1, value='Isolated Population')
+    m = draw_hexagons(st.session_state['isolated_hex'], m, color='red', zoom_start=zoom, opacity=0.7, value='Isolated Population with no migration route found.')
     # draw the hexagons barriers and barrier lines between direct neighbors
-    m = draw_hexagons_with_values(barrier_hex, m, threshold = st.session_state['threshold'])
-    m = draw_barriers(barrier_lines, m, threshold = st.session_state['threshold'])
+    m = draw_hexagons_with_values(st.session_state['barrier_hex'], m, threshold = st.session_state['threshold'])
+    m = draw_barriers(st.session_state['barrier_lines'], m, threshold = st.session_state['threshold'])
     # Display the map in Streamlit
     folium_static(m, width=800, height=600)
+    st.write(f"Number of isolated populations with no migration route found: {len(st.session_state['isolated_hex'])}")
