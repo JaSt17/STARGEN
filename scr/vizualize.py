@@ -46,7 +46,7 @@ def draw_hexagons(hexagons, m=None, color='orange', zoom_start=1, value=None):
                 weight=1,
                 color=None,
                 fill_color=color,
-                fill_opacity=0.4,
+                fill_opacity=0.5,
                 fill=True
             )
             if value:
@@ -65,6 +65,8 @@ def draw_hexagons_with_values(hex_dict, m=None, zoom_start=1, threshold=0.0):
 
     # write the values to the center of each hexagon
     for hexagon, value in zip(hexagons, values):
+        if value < threshold:
+            continue
         col = mcolors.to_hex(cmap(value))
         m = draw_hexagons([hexagon], m, color=col, zoom_start=zoom_start, value=value)
     return m
@@ -84,52 +86,27 @@ def draw_barriers(barriers_dict, m=None, zoom_start=1, threshold=0.0):
         polyline.add_to(m)
     return m
 
-# this function takes two hexagons and a map and draws a line between the two midpoints of the hexagons
-def draw_borders(hexagon1, hexagon2, m, color, distance=None):
-    # get the midpoint of both hexagons
-    mid1 = h3.h3_to_geo(hexagon1)
-    mid2 = h3.h3_to_geo(hexagon2)
-    
-    # check if the points are on the opposite sides of the antimeridian
-    if abs(mid1[1] - mid2[1]) > 180:
-        # if they are, add 360 to the longitude of the point with the smaller longitude
-        if mid1[1] < mid2[1]:
-            mid1 = (mid1[0], mid1[1] + 360)
-        else:
-            mid2 = (mid2[0], mid2[1] + 360)
-            
-    # Draw line between the two midpoints
-    line = [mid1, mid2]
-    folium.PolyLine(locations=line,
-                    color=color,
-                    weight=5).add_to(m)
-    
-        # Calculate the midpoint of the line
-    midpoint = [sum(x)/len(x) for x in zip(*line)]
-
-    # Create a custom icon for displaying text
-    icon = folium.DivIcon(html=f'<div style="font-size: 12pt">{distance:.2f}</div>')
-
-    # Add a marker at the midpoint with the custom text icon
-    folium.Marker(location=midpoint, icon=icon).add_to(m)
-    
-    return m
-
 # this function takes a time bin and a map and draws all neighboring lines for the hexagons in that time bin
-def draw_all_boarders_for_time_bin(time_bin, m, color="red", threshold=0.0):
-    # get the normalized distance for the color gradient
-    normalized_time_bin = normalize_distances(time_bin)
+def draw_migration_for_time_bin(time_bin, m, color="green"):
+    # Loop through all pairs of hexagons in the time bin
+    for pair, distance in time_bin.items():
+        hex1, hex2 = pair
+        
+        # Get the midpoints of both hexagons
+        midpoint1 = h3.h3_to_geo(hex1)
+        midpoint2 = h3.h3_to_geo(hex2)
+        
+        # Check if the points are on opposite sides of the antimeridian
+        if abs(midpoint1[1] - midpoint2[1]) > 180:
+            midpoint1_adj = (midpoint1[0], midpoint1[1] - 360)
+            midpoint2_adj = (midpoint2[0], midpoint2[1] + 360)
+            lines = [[midpoint1_adj, midpoint2], [midpoint1, midpoint2_adj]]
+        else:
+            lines = [[midpoint1, midpoint2]]
+        
+        # Loop over all lines and draw them on the map
+        for line in lines:
+            polyline = folium.PolyLine(locations=line, color=color, weight=2)
+            polyline.add_to(m)
     
-    # create a color gradient to color the lines based on the normalized distance
-    colors = [(1,1,0), (255,0,0)]
-    cmap = mcolors.LinearSegmentedColormap.from_list("custom_darkred_to_yellow", colors)
-    
-    # loop through all hexagons in the time bin
-    for pair in time_bin:
-        # only draw the line if the distance is below the threshold
-        if time_bin[pair] >= threshold:
-            # get the color for the line based on the normalized distance
-            col = mcolors.to_hex(cmap(normalized_time_bin[pair]))
-            hex1, hex2 = list(pair)
-            m = draw_borders(hex1, hex2, m, color= col, distance=time_bin[pair])
     return m

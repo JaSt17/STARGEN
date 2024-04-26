@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from h3 import h3
 
 # function that reads the ancient DNA Annotations file into a data frame
@@ -10,46 +11,40 @@ def read_df(path):
 
 # function that calculates the average distance between two groups of samples
 def calc_avg_dist(samples_hex1, samples_hex2, dist_matrix):
-    return dist_matrix.loc[samples_hex1, samples_hex2].values.flatten().mean()
+    return np.mean(dist_matrix.loc[samples_hex1, samples_hex2].values.flatten())
 
 def calc_neighbor_dist(hexagons, dist_matrix, time_bin_df, hex_col, k_neighbors = 1, allow_k_distance=False, scale_by_distance=False):
     # get the samples in each hexagon
     samples_in_hex = time_bin_df.groupby(hex_col)['ID'].apply(list).to_dict()
+    # create a list of all values in samples_in_hex
+    all_samples = [sample for samples in samples_in_hex.values() for sample in samples]
+    # create a submatrix of the distance matrix for the samples in the hexagons
+    dist_matrix = dist_matrix.loc[all_samples, all_samples]
     # initialize the dictionary to store the average distances between neighboring hexagons
     averages = {}
     # get the set of hexagons
     hexagons_set = set(hexagons)
     # initialize the cache for the average distances
     avg_dist_cache = {}
+    # initialize the cache for the k-ring distances
+    k_ring_distances_cache = {}
 
     for hexagon in hexagons:
         neighbors = dict()
         # get the neighbors of the hexagon in k distance
         for k in range(1, k_neighbors+1):
-            if k == 1:
-                neighbors[k] = set(h for h in h3.k_ring_distances(hexagon, k)[k] if h in hexagons_set)
-            else:
-                # check if the we have already found a neighor between the hexagon and the new neighbor
-                potential_neighbors = [h for h in h3.k_ring_distances(hexagon, k)[k] if h in hexagons_set]
-                for n in potential_neighbors:  # check if we want to add the neighbor
-                    # check if there is already a neighbor between this hexagon and the new potential neighbor
-                    try:
-                        if any(h in neighbors for h in h3.h3_line(n, hexagon)):
-                            continue
-                    except:
-                        pass
-                    # check if the potential neighbor is a neighbor of a neighbor of the hexagon
-                    if k-1 in neighbors and neighbors[k-1]:
-                        if any(h in h3.k_ring(n, 1) for h in neighbors[k-1]):
-                        # remove the potential neighbor from the list
-                            continue
-                    neighbors[k] = set(h for h in h3.k_ring_distances(hexagon, k)[k] if h in hexagons_set)
-            
+            # if the neighbors have not been calculated yet, calculate them
+            if (hexagon, k) not in k_ring_distances_cache:
+                k_ring_distances_cache[(hexagon, k)] = set(h for h in h3.k_ring_distances(hexagon, k)[k] if h in hexagons_set)
+            neighbors[k] = k_ring_distances_cache[(hexagon, k)]
         # if there are no neighbors in k distance, and the user allows for more than k distance, get the neighbors in 20 distance
         if allow_k_distance and [len(neighbors[k]) for k in neighbors].count(0) == len(neighbors):
             k = k_neighbors + 1
-            while [len(neighbors[k]) for k in neighbors].count(0) == len(neighbors) and k < 20:
-                neighbors[k] = set(h for h in h3.k_ring_distances(hexagon, k)[k] if h in hexagons_set)
+            while all(len(neighbors[k]) == 0 for k in neighbors) and k < 20:
+                # if the neighbors have not been calculated yet, calculate them
+                if (hexagon, k) not in k_ring_distances_cache:
+                    k_ring_distances_cache[(hexagon, k)] = set(h for h in h3.k_ring_distances(hexagon, k)[k] if h in hexagons_set)
+                neighbors[k] = k_ring_distances_cache[(hexagon, k)]
                 k += 1
                 
         # calculate the average distance between the hexagon and its neighbors
