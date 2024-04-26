@@ -7,7 +7,7 @@ import base64
 
 
 # function that draws hexagons on a map
-def draw_hexagons(hexagons, m=None, color='orange', zoom_start=1, value=None):
+def draw_hexagons(hexagons, m=None, color='darkgreen', zoom_start=1, value=None, opacity=0.5):
     # Create a map if it is not provided
     if m is None:
         m = folium.Map(location=(0.0, 0.0), tiles="Esri worldstreetmap", zoom_start=zoom_start)
@@ -46,7 +46,7 @@ def draw_hexagons(hexagons, m=None, color='orange', zoom_start=1, value=None):
                 weight=1,
                 color=None,
                 fill_color=color,
-                fill_opacity=0.5,
+                fill_opacity=opacity,
                 fill=True
             )
             if value:
@@ -79,6 +79,8 @@ def draw_barriers(barriers_dict, m=None, zoom_start=1, threshold=0.0):
     cmap = mcolors.LinearSegmentedColormap.from_list("custom_darkblue_to_orange", colors)
     
     for barrier, value in zip(barriers, values):
+        if value < threshold:
+            continue
         col = mcolors.to_hex(cmap(value))
         barrier = list(barrier)
         polyline = folium.PolyLine(barrier, color = col)
@@ -98,15 +100,20 @@ def draw_migration_for_time_bin(time_bin, m, color="green"):
         
         # Check if the points are on opposite sides of the antimeridian
         if abs(midpoint1[1] - midpoint2[1]) > 180:
-            midpoint1_adj = (midpoint1[0], midpoint1[1] - 360)
-            midpoint2_adj = (midpoint2[0], midpoint2[1] + 360)
+            if midpoint1[1] < midpoint2[1]:
+                midpoint1_adj = (midpoint1[0], midpoint1[1] + 360)
+                midpoint2_adj = (midpoint2[0], midpoint2[1] - 360)
+            else:
+                midpoint1_adj = (midpoint1[0], midpoint1[1] - 360)
+                midpoint2_adj = (midpoint2[0], midpoint2[1] + 360)
             lines = [[midpoint1_adj, midpoint2], [midpoint1, midpoint2_adj]]
         else:
             lines = [[midpoint1, midpoint2]]
         
         # Loop over all lines and draw them on the map
         for line in lines:
-            polyline = folium.PolyLine(locations=line, color=color, weight=2)
+            polyline = folium.PolyLine(locations=line, color=color)
+            polyline.add_child(folium.Tooltip(distance))
             polyline.add_to(m)
     
     return m

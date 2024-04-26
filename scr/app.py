@@ -5,8 +5,8 @@ import pandas as pd
 import pickle
 import os
 from label_samples_time_hexa import label_samples
-from vizualize import draw_hexagons, draw_all_boarders_for_time_bin
-from func import rename_time_bins, calc_dist_time_bin, normalize_distances, get_time_bin_hexagons, get_min_max_dist
+from vizualize import draw_hexagons, draw_migration_for_time_bin, draw_hexagons_with_values, draw_barriers
+from func import rename_time_bins, calc_dist_time_bin, normalize_distances, get_time_bin_hexagons, get_min_max_dist, get_isolated_hex_and_barriers, find_closest_population
 
 # Function to clear session state
 def clear_state():
@@ -58,17 +58,17 @@ if 'setup_done' not in st.session_state:
     # button to get information about resolution
     if st.button("Information about resolution"):
         st.table(get_resolution_data())
-
-    # Checkbox to allow expanding the search area and button to get information about it
-    st.session_state['allow_k_distance'] = st.checkbox('Expand Search Area', value=True)
+        
+    # Slider to choose the neighborhood size for the distance calculation
+    st.session_state['neighborhood_size'] = st.slider('Neighborhood range:', 1, 20, 5)
     
-    # button to get information about expanding search area
-    if st.button("Information about search area & neighbors"):
-        st.write("""
-    As the resolution increases, the size of each hexagon decreases, resulting in a reduced likelihood of adjacent hexagons being direct neighbors. 
-    To ensure visibility between closely situated hexagons, users are encouraged to utilize the "Expand Search Area" option.
-    When activated, this feature systematically searches through hexagons at greater distances until a neighboring hexagon is identified.
-    """)
+        # button to get information about time bins
+    if st.button("Information about Neighborhood range"):
+            st.write("""
+    The neighborhood range is the number of hexagons that are considered as neighbors for each hexagon. For example, if the neighborhood range is 5,
+    the average genetic distance between a hexagon and all hexagons in a range of 5 hexagons will be calculated. Increasing the neighborhood range will increase the computation time.
+        """)
+
     # Button to run the tool
     if st.button('Run'):
         st.text('Running GeoGeneTrack...')
@@ -77,6 +77,7 @@ if 'setup_done' not in st.session_state:
         # read the distance matrix from the file
         # get path to the distance matrix
         path_to_matrix = os.getcwd()+"/1_dist_matrix/eucl_dist.pkl"
+        # load the distance matrix to the session state
         st.session_state['matrix'] = pd.read_pickle(path_to_matrix)
         st.rerun()
         
@@ -86,61 +87,56 @@ if 'setup_done' in st.session_state and st.session_state['setup_done']:
     if st.button('Return to Home', key='home'):
         clear_state()
         st.rerun()
-        
-    # initialize the neighborhood size for the distance calculation and the scale by distance
-    if 'neighborhood_size' not in st.session_state:
-        st.session_state['neighborhood_size'] = 1
-        st.session_state['scale_by_distance'] = False
     
-    # lable the samples with hexagon id and time bin and save it in a dataframe
-    df = label_samples(os.getcwd(),st.session_state['time_bins'],st.session_state['resolution'], st.session_state['same_age_range'])
-    # rename the time bins to be more readable
-    time_bins = rename_time_bins(df)
+    if 'df' not in st.session_state:
+        # lable the samples with hexagon id and time bin and save it in a dataframe
+        st.session_state['df'] = label_samples(os.getcwd(),st.session_state['time_bins'],st.session_state['resolution'], st.session_state['same_age_range'])
+    if 'time_bins_dist' not in st.session_state:
+        # calculate the average distances between neighboring hexagons for each time bin with the given parameters
+        st.session_state['time_bins_dist'] = calc_dist_time_bin(st.session_state['df'], st.session_state['matrix'], st.session_state['neighborhood_size'], False)
+    
+    # rename the time bins to display them in the dropdown
+    time_bins = rename_time_bins(st.session_state['df'])
     # get the hexagons for each time bin
-    time_bins_hexagons = get_time_bin_hexagons(df)
+    time_bins_hexagons = get_time_bin_hexagons(st.session_state['df'])
 
     # dropdown to select time bins
     selected_time_bin = st.selectbox("Time Bin", options=time_bins)
-    
-    # checkbox for normalizing distance values
-    st.session_state["normalize_distances"] = st.sidebar.checkbox("Normalize distances", value=False)
-        
-    # checkbox for scaling the distance values by the distance
-    if st.sidebar.checkbox("Scale distances by distance", value=False):
-        st.session_state['scale_by_distance'] = True
-    else:
-        st.session_state['scale_by_distance'] = False
-        
-    # Slider to choose the neighborhood size for the distance calculation
-    st.session_state['neighborhood_size'] = st.sidebar.slider('Neighborhood range:', 1, 6, st.session_state['neighborhood_size'])
-
-    # calculate the average distances between neighboring hexagons for each time bin with the given parameters
-    time_bins_dist = calc_dist_time_bin(df, st.session_state['matrix'],
-                                        st.session_state['neighborhood_size'] ,
-                                        st.session_state['allow_k_distance'],
-                                        st.session_state['scale_by_distance'])
+    if 'selected_time_bin_id' not in st.session_state:
+        st.session_state['selected_time_bin_id'] = 0
+    new_selected_time_bin_id = time_bins.index(selected_time_bin)
 
     # get the hexagons and distance values for the selected time bin
     hexagons = time_bins_hexagons[selected_time_bin]
-    time_bin = time_bins_dist[selected_time_bin]
-    if st.session_state["normalize_distances"]:
-        time_bin = normalize_distances(time_bin)
-    
-    # get min and max distance for the selected time bin for the threshold
-    min_dist, max_dist = get_min_max_dist(time_bin)
+    time_bin = st.session_state['time_bins_dist'][selected_time_bin]
+    # normalize the distances for each timebin
+    time_bin = normalize_distances(time_bin)
     
     # initialize the threshold with the minimum distance value
     if 'threshold' not in st.session_state:
-        st.session_state['threshold'] = min_dist
-        
-    # change the threshold if the user changes the time bin
-    if st.session_state['threshold'] < min_dist:
-        st.session_state['threshold'] = min_dist
-    if st.session_state['threshold'] > max_dist:
-        st.session_state['threshold'] = max_dist
+        st.session_state['threshold'] = 0.0
+        st.session_state['isolated_threshold'] = 0.4
         
     # Slider to choose the threshold for the distant values which should be displayed
-    st.session_state['threshold'] = st.sidebar.slider('Which distances should be displayed ?:', min_dist, max_dist, st.session_state['threshold'], 0.01)
+    st.session_state['threshold'] = st.sidebar.slider('Which distances should be displayed ?:', 0.0, 1.0, st.session_state['threshold'], 0.01)
+    
+    # Slider to chose the threshold for isolated populations
+    new_isolated_threshold = st.sidebar.slider('Which distances are considered as isolated populations ?:', 0.0, 1.0, st.session_state['isolated_threshold'], 0.01)
+    
+    # get the isolated hexagons and barriers for the selected time bin
+    isolated_hex, barrier_lines, barrier_hex = get_isolated_hex_and_barriers(time_bin, hexagons,  st.session_state['isolated_threshold'])
+    
+    # check if the threshold has changed
+    if new_isolated_threshold != st.session_state['isolated_threshold'] or new_selected_time_bin_id != st.session_state['selected_time_bin_id'] or 'closest_populations' not in st.session_state:
+        # get the isolated hexagons and barriers for the selected time bin
+        st.session_state['isolated_threshold'] = new_isolated_threshold
+        isolated_hex, barrier_lines, barrier_hex = get_isolated_hex_and_barriers(time_bin, hexagons,  st.session_state['isolated_threshold'])
+        st.session_state['closest_populations'], st.session_state['isolated_hex'] = find_closest_population(st.session_state['df'], st.session_state['selected_time_bin_id'], isolated_hex, st.session_state['matrix'], st.session_state['isolated_threshold'])
+    
+    if st.sidebar.checkbox("Show possible migration routes", False):
+        st.session_state['show_migration'] = True
+    else:
+        st.session_state['show_migration'] = False
     
     # set an initial map state if it does not exist
     if 'map_state' not in st.session_state:
@@ -163,8 +159,13 @@ if 'setup_done' in st.session_state and st.session_state['setup_done']:
         m = draw_hexagons(hexagons, m, zoom_start=zoom)
     else:
         m = draw_hexagons(hexagons)
-        
-    # draw all average distance values between neighboring hexagons for the chosen time bin
-    m = draw_all_boarders_for_time_bin(time_bin, m, threshold=st.session_state['threshold'])
+    if st.session_state['show_migration']:
+        # draw the migration lines for the isolated hexagons
+        m = draw_migration_for_time_bin(st.session_state['closest_populations'], m)
+    # highlight the isolated hexagons in red that can not be explained by migration
+    m = draw_hexagons(st.session_state['isolated_hex'], m, color='red', zoom_start=zoom, opacity=1, value='Isolated Population')
+    # draw the hexagons barriers and barrier lines between direct neighbors
+    m = draw_hexagons_with_values(barrier_hex, m, threshold = st.session_state['threshold'])
+    m = draw_barriers(barrier_lines, m, threshold = st.session_state['threshold'])
     # Display the map in Streamlit
     folium_static(m, width=800, height=600)
