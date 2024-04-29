@@ -177,7 +177,9 @@ if 'setup_done' in st.session_state and st.session_state['setup_done']:
     m = draw_hexagons(st.session_state['isolated_hex'], m, color='red', zoom_start=zoom, opacity=0.7, value='Isolated Population without migration route.')
     # draw the hexagons barriers and barrier lines between direct neighbors
     m = draw_hexagons_with_values(st.session_state['barrier_hex'], m, threshold = st.session_state['threshold'])
-    m = draw_barriers(st.session_state['barrier_lines'], m, threshold = st.session_state['threshold'])
+    # check if there are any barriers
+    if len(st.session_state['barrier_lines']) > 0:
+        m = draw_barriers(st.session_state['barrier_lines'], m, threshold = st.session_state['threshold'])
     # Display the map in Streamlit
     folium_static(m, width=800, height=600)
     st.write(f"Number of isolated populations with no migration route found: {len(st.session_state['isolated_hex'])}")
