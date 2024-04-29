@@ -163,7 +163,10 @@ if 'setup_done' in st.session_state and st.session_state['setup_done']:
         
     # get the specifyed map state
     lat, lon, zoom = st.session_state['map_state'].values()
-    m = folium.Map(location=(lat, lon), tiles="Esri worldstreetmap", zoom_start=zoom)
+    if not st.sidebar.checkbox("Black and White Map", False):
+        m = folium.Map(location=(lat, lon), tiles="Esri worldstreetmap", zoom_start=zoom)
+    else:
+        m = folium.Map(location=(lat, lon),  tiles="Cartodb Positron", zoom_start=zoom)
     # draw all hexagons for the selected time bin which hold the samples
     m = draw_hexagons(hexagons, m, zoom_start=zoom)
     # check if the migration routes should be displayed
@@ -171,7 +174,7 @@ if 'setup_done' in st.session_state and st.session_state['setup_done']:
         # draw the migration lines for the isolated hexagons
         m = draw_migration_for_time_bin(st.session_state['closest_populations'], m)
     # highlight the isolated hexagons in red that can not be explained by migration
-    m = draw_hexagons(st.session_state['isolated_hex'], m, color='red', zoom_start=zoom, opacity=0.7, value='Isolated Population with no migration route found.')
+    m = draw_hexagons(st.session_state['isolated_hex'], m, color='red', zoom_start=zoom, opacity=0.7, value='Isolated Population without migration route.')
     # draw the hexagons barriers and barrier lines between direct neighbors
     m = draw_hexagons_with_values(st.session_state['barrier_hex'], m, threshold = st.session_state['threshold'])
     m = draw_barriers(st.session_state['barrier_lines'], m, threshold = st.session_state['threshold'])
