@@ -9,8 +9,8 @@ from func import read_df
 # function that creates n time bins with equally sized age groups
 def create_equal_age_groups(df, number_of_bins):
     temp_df = df.sort_values('Age')
-    # leave out the oldest 60 samples for creation of time bin size
-    temp_df = temp_df.iloc[:-60]
+    # leave out the oldest 120 samples for creation of time bin size
+    temp_df = temp_df.iloc[:-120]
     # get the smallest and largest age
     min_age = temp_df['Age'].min()
     max_age = temp_df['Age'].max()

@@ -36,13 +36,13 @@ if 'setup_done' not in st.session_state:
         st.title('GeoGenTrack')
     
     # Slider to choose the number of time bins and button to get information about it
-    st.session_state['time_bins'] = st.slider('Select a number of time bins', 1, 30, 18, 1)
+    st.session_state['time_bins'] = st.slider('Select a number of time bins', 1, 20, 11, 1)
     # Checkbox to enable same time bin length
     st.session_state['same_age_range'] = st.checkbox('Same age range for each time bin', value=True)
 
     # show the user the current time span for each time bin give the number of time bins
     if st.session_state['same_age_range']:
-        st.write(f"Current time span for each time bin is {round((18000)/st.session_state['time_bins'])} years.")
+        st.write(f"Current time span for each time bin is {round((11000)/st.session_state['time_bins'])} years.")
         
     # button to get information about time bins
     if st.button("Information about time bins"):
@@ -60,7 +60,7 @@ if 'setup_done' not in st.session_state:
         st.table(get_resolution_data())
         
     # Slider to choose the neighborhood size for the distance calculation
-    st.session_state['neighborhood_size'] = st.slider('Neighborhood range:', 1, 20, 5)
+    st.session_state['neighborhood_size'] = st.slider('Neighborhood range:', 1, 20, 7)
     
         # button to get information about time bins
     if st.button("Information about Neighborhood range"):
@@ -131,7 +131,7 @@ if 'setup_done' in st.session_state and st.session_state['setup_done']:
         # get the isolated hexagons and barriers for the selected time bin
         st.session_state['isolated_hex'], st.session_state['barrier_lines'], st.session_state['barrier_hex'] = get_isolated_hex_and_barriers(time_bin, hexagons, st.session_state['isolated_threshold'])
         # get imputed hexagons
-        st.session_state['imputed_hex'] = impute_missing_hexagons_multiple_runs(st.session_state['barrier_hex'], hexagons, num_runs=5)
+        st.session_state['imputed_hex'] = impute_missing_hexagons_multiple_runs(st.session_state['barrier_hex'], hexagons, num_runs=8)
         # change the threshold for isolated populations
         st.session_state['isolated_threshold'] = new_isolated_threshold
         # change the selected time bin id

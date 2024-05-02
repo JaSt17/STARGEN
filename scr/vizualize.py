@@ -122,7 +122,7 @@ def draw_migration_for_time_bin(time_bin, m, color="green"):
 
 def get_color_gradient():
     # Define the colors for the colormap
-    colors =[(1, 0.9, 0.7), (0.8, 0.5, 0.2), (0.4, 0.5, 0.9), (0, 0.1, 0.4)]
+    colors =[(1, 0.9, 0.7), (0.8, 0.5, 0.2), (0.47, 0.8, 0.94)]
     # Create the colormap
     cmap = mcolors.LinearSegmentedColormap.from_list("costum_color_gradient", colors)
     
