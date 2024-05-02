@@ -10,9 +10,11 @@ def read_df(path):
     df['Age'] = pd.to_numeric(df['Age'], errors='coerce')
     return df
 
+
 # function that calculates the average distance between two groups of samples
 def calc_avg_dist(samples_hex1, samples_hex2, dist_matrix):
     return dist_matrix.loc[samples_hex1, samples_hex2].values.flatten().mean()
+
 
 def calc_neighbor_dist(hexagons, dist_matrix, time_bin_df, hex_col, k_neighbors = 1, scale_by_distance=False):
     # get the samples in each hexagon
@@ -69,6 +71,7 @@ def calc_neighbor_dist(hexagons, dist_matrix, time_bin_df, hex_col, k_neighbors 
 
     return averages
 
+
 # this function calculates the average distance between the each hexagon and its neighbors for each time bin
 def calc_dist_time_bin(df, dist_matrix=None, k_neighbors=1, scale_by_distance=False):
     
@@ -101,6 +104,7 @@ def calc_dist_time_bin(df, dist_matrix=None, k_neighbors=1, scale_by_distance=Fa
     # Return the dictionary with the average distances between neighboring hexagons for each time bin.
     return averages
 
+
 # function that gets the hexagons for each time bin
 def get_time_bin_hexagons(df):
     
@@ -130,6 +134,7 @@ def get_time_bin_hexagons(df):
         
     return time_bin_hexagons
 
+
 # function that gets isolated hexagons and barriers for each time bin
 def get_isolated_hex_and_barriers(time_bin, hexagons, threshold):
     # directory to save the barrier lines and hexagons with their distances
@@ -149,7 +154,7 @@ def get_isolated_hex_and_barriers(time_bin, hexagons, threshold):
             # get the pair of dots that the two hexagons share
             shared_boundary = frozenset([x for x in boundary1 if x in boundary2])
             # add the line and its distance to the dictionary
-            barrier_lines[shared_boundary] = distance
+            barrier_lines[shared_boundary] = round(distance,2)
             hex_dist_to_direct_neighbors[pair[0]].append(distance)
             hex_dist_to_direct_neighbors[pair[1]].append(distance)
         # if the hexagons are further appart
@@ -165,7 +170,7 @@ def get_isolated_hex_and_barriers(time_bin, hexagons, threshold):
                 continue
 
     # Calculate the average distance for each hexagon and round it to 2 decimal places
-    barrier_hex = {hex: round(sum(distances) / len(distances), 2) for hex, distances in barrier_hex.items()}
+    barrier_hex = {hex: round(sum(distances)/len(distances), 2) for hex, distances in barrier_hex.items()}
         
     # Create a list of isolated hexagons
     # add isolated hexagons that have direct neighbors
@@ -174,6 +179,7 @@ def get_isolated_hex_and_barriers(time_bin, hexagons, threshold):
     isolated_hex += [hex for hex in hexagons if hex not in hex_dist_to_direct_neighbors and all(barrier_hex[n] >= threshold for n in h3.k_ring_distances(hex, 1)[1] if n in barrier_hex)]
     
     return isolated_hex, barrier_lines, barrier_hex
+
 
 # function that finds the closest population for each isolated hexagon
 def find_closest_population(df, time_bin, isolated_hex, dist_matrix, threshold):
@@ -224,6 +230,45 @@ def find_closest_population(df, time_bin, isolated_hex, dist_matrix, threshold):
             new_isolated_hex.append(iso)
     
     return closest_populations, new_isolated_hex
+
+
+def impute_missing_hexagons_multiple_runs(barrier_hex, hexagons, num_runs=5):
+    # impute the missing hexagons in the barrier_hex
+    def impute_missing_hexagons(barrier_hex):
+        # convert the barrier_hex to sets for faster lookup
+        barrier_hex_set = set(barrier_hex)
+        # create a dictionary to store
+        new_barrier_hex_count = defaultdict(int)
+        new_barrier_hex_sum = defaultdict(int)
+        new_barrier_hex = defaultdict(list)
+        # loop through all the barrier hexagons
+        for hexagon in barrier_hex:
+            # check if the neighbors are not in the barrier_hex
+            neighbors = [neighbor for neighbor in h3.k_ring(hexagon, 1) if neighbor not in barrier_hex_set]
+            # loop over all remaining neighbors
+            for neighbor in neighbors:
+                new_barrier_hex_count[neighbor] += 1
+                new_barrier_hex_sum[neighbor] += barrier_hex[hexagon]
+                new_barrier_hex[neighbor] = round(new_barrier_hex_sum[neighbor] / new_barrier_hex_count[neighbor], 2)
+        # delete the hexagons that have less than 3 neighbors
+        for hexagon in list(new_barrier_hex.keys()):
+            if new_barrier_hex_count[hexagon] <= 2:
+                del new_barrier_hex[hexagon]
+        return new_barrier_hex
+
+    # create a copy of the barrier_hex
+    imputed_hex = barrier_hex.copy()
+    # loop through the number of runs
+    for _ in range(num_runs):
+        imputed_hex.update(impute_missing_hexagons(imputed_hex))
+        
+    # delete the hexagons that are already in the barrier_hex
+    imputed_hex = {hex: dist for hex, dist in imputed_hex.items() if hex not in barrier_hex}
+    # delete the hexagons that are already in the hexagons
+    imputed_hex = {hex: dist for hex, dist in imputed_hex.items() if hex not in hexagons}
+
+    return imputed_hex
+
         
 # function that normalizes the distance values on a interval from 0 to 1
 def normalize_distances(time_bin):
@@ -232,6 +277,7 @@ def normalize_distances(time_bin):
     for pair in time_bin:
         normalized_time_bin[pair] = round((time_bin[pair] - min_dist) / (max_dist - min_dist), 5)
     return normalized_time_bin
+
 
 # function that gets the minimum and maximum distance values for a time bin
 def get_min_max_dist(time_bin):
@@ -243,6 +289,7 @@ def get_min_max_dist(time_bin):
         if time_bin[pair] > max_dist:
             max_dist = time_bin[pair]
     return min_dist, max_dist
+
 
 # function that renames the time bins into a more readable format
 def rename_time_bins(df):

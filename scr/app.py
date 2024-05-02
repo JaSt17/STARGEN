@@ -6,7 +6,7 @@ import pickle
 import os
 from label_samples_time_hexa import label_samples
 from vizualize import draw_hexagons, draw_migration_for_time_bin, draw_hexagons_with_values, draw_barriers
-from func import rename_time_bins, calc_dist_time_bin, normalize_distances, get_time_bin_hexagons, get_min_max_dist, get_isolated_hex_and_barriers, find_closest_population
+from func import *
 
 # Function to clear session state
 def clear_state():
@@ -130,6 +130,8 @@ if 'setup_done' in st.session_state and st.session_state['setup_done']:
     if new_isolated_threshold != st.session_state['isolated_threshold'] or new_selected_time_bin_id != st.session_state['selected_time_bin_id']:
         # get the isolated hexagons and barriers for the selected time bin
         st.session_state['isolated_hex'], st.session_state['barrier_lines'], st.session_state['barrier_hex'] = get_isolated_hex_and_barriers(time_bin, hexagons, st.session_state['isolated_threshold'])
+        # get imputed hexagons
+        st.session_state['imputed_hex'] = impute_missing_hexagons_multiple_runs(st.session_state['barrier_hex'], hexagons, num_runs=5)
         # change the threshold for isolated populations
         st.session_state['isolated_threshold'] = new_isolated_threshold
         # change the selected time bin id
@@ -177,6 +179,8 @@ if 'setup_done' in st.session_state and st.session_state['setup_done']:
     m = draw_hexagons(st.session_state['isolated_hex'], m, color='red', zoom_start=zoom, opacity=0.7, value='Isolated Population without migration route.')
     # draw the hexagons barriers and barrier lines between direct neighbors
     m = draw_hexagons_with_values(st.session_state['barrier_hex'], m, threshold = st.session_state['threshold'])
+    # draw the imputed hexagons
+    m = draw_hexagons_with_values(st.session_state['imputed_hex'], m, threshold = st.session_state['threshold'], imputed=True)
     # check if there are any barriers
     if len(st.session_state['barrier_lines']) > 0:
         m = draw_barriers(st.session_state['barrier_lines'], m, threshold = st.session_state['threshold'])

@@ -7,7 +7,7 @@ import base64
 
 
 # function that draws hexagons on a map
-def draw_hexagons(hexagons, m=None, color='darkgreen', zoom_start=1, value=None, opacity=0.5):
+def draw_hexagons(hexagons, m=None, color='darkgreen', zoom_start=1, value=None, opacity=0.5, imputed=False):
     # Create a map if it is not provided
     if m is None:
         m = folium.Map(location=(0.0, 0.0), tiles="Esri worldstreetmap", zoom_start=zoom_start)
@@ -50,33 +50,35 @@ def draw_hexagons(hexagons, m=None, color='darkgreen', zoom_start=1, value=None,
                 fill=True
             )
             if value:
-                polygon.add_child(folium.Tooltip(value))
+                if imputed:
+                    polygon.add_child(folium.Tooltip(f"{value} (Imputed)"))
+                else:
+                    polygon.add_child(folium.Tooltip(value))
             
             polygon.add_to(m)
     return m
 
-def draw_hexagons_with_values(hex_dict, m=None, zoom_start=1, threshold=0.0):
+def draw_hexagons_with_values(hex_dict, m=None, zoom_start=1, threshold=0.0, imputed=False):
     hexagons = hex_dict.keys()
     values = hex_dict.values()
     
-    # create a color gradient to color the lines based on the normalized distance
-    colors = [(1, 0.5, 0), (0, 0, 0.5)]  # Dark blue to orange
-    cmap = mcolors.LinearSegmentedColormap.from_list("custom_darkblue_to_orange", colors)
+    # get color gradient
+    cmap = get_color_gradient()
 
     # write the values to the center of each hexagon
     for hexagon, value in zip(hexagons, values):
         if value < threshold:
             continue
         col = mcolors.to_hex(cmap(value))
-        m = draw_hexagons([hexagon], m, color=col, zoom_start=zoom_start, value=value)
+        m = draw_hexagons([hexagon], m, color=col, zoom_start=zoom_start, value=value, imputed=imputed)
     return m
 
 def draw_barriers(barriers_dict, m=None, zoom_start=1, threshold=0.0):
     barriers = barriers_dict.keys()
     values = barriers_dict.values()
     
-    colors = [(1, 0.5, 0, 0.2), (0, 0, 0.5, 0.2)]  # Dark blue to orange with reduced opacity
-    cmap = mcolors.LinearSegmentedColormap.from_list("custom_darkblue_to_orange", colors)
+    # get color gradient
+    cmap = get_color_gradient()
     
     for barrier, value in zip(barriers, values):
         if value < threshold:
@@ -117,3 +119,12 @@ def draw_migration_for_time_bin(time_bin, m, color="green"):
             polyline.add_to(m)
     
     return m
+
+def get_color_gradient():
+    # Define the colors for the colormap
+    colors =[(1, 0.9, 0.7), (0.8, 0.5, 0.2), (0.4, 0.5, 0.9), (0, 0.1, 0.4)]
+    # Create the colormap
+    cmap = mcolors.LinearSegmentedColormap.from_list("costum_color_gradient", colors)
+    
+    return cmap
+    
