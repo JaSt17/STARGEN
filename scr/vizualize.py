@@ -85,9 +85,13 @@ def draw_barriers(barriers_dict, m=None, zoom_start=1, threshold=0.0):
             continue
         col = mcolors.to_hex(cmap(value))
         barrier = list(barrier)
-        polyline = folium.PolyLine(barrier, color = col)
-        polyline.add_child(folium.Tooltip(value))
-        polyline.add_to(m)
+        # try to draw the barrier
+        try:
+            polyline = folium.PolyLine(barrier, color = col)
+            polyline.add_child(folium.Tooltip(value))
+            polyline.add_to(m)
+        except:
+            pass
     return m
 
 # this function takes a time bin and a map and draws all neighboring lines for the hexagons in that time bin
