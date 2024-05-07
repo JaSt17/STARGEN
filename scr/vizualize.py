@@ -126,9 +126,52 @@ def draw_migration_for_time_bin(time_bin, m, color="green"):
 
 def get_color_gradient():
     # Define the colors for the colormap
-    colors =[(1, 0.9, 0.7), (0.8, 0.5, 0.2), (0.47, 0.8, 0.94)]
+    colors = [(1, 0.9, 0.7), (0.8, 0.5, 0.2), (0.36, 0.7, 0.94)]
     # Create the colormap
     cmap = mcolors.LinearSegmentedColormap.from_list("costum_color_gradient", colors)
     
     return cmap
+
+def add_legend(m):
+    from branca.element import Template, MacroElement
+
+    # Create the legend template as an HTML element
+    template = """
+    {% macro html(this, kwargs) %}
+    <div id='maplegend' class='maplegend' 
+        style='position: absolute; z-index: 9999; background-color: rgba(255, 255, 255, 0.5);
+        border-radius: 6px; padding: 10px; font-size: 10.5px; right: 20px; top: 20px;'>     
+    <div class='legend-scale'>
+    <ul class='legend-labels'>
+        <li><span style='background: green; opacity: 0.5;'></span>Area with Samples</li>
+        <li><span style='background: red; opacity: 0.5;'></span>Isolated Population</li>
+        <li><svg height="12" width="10"><line x1="0" y1="2" x2="10" y2="10" style="stroke:green;stroke-width:2" /></svg>Possible Migration Route</li>
+    </ul>
+    </div>
+    <div class='legend-gradient'>
+        <span style="font-weight: bold;">Genetic Distances</span>
+        <span style='background: linear-gradient(to right, rgb(255, 230, 179), rgb(204, 153, 51), rgb(92, 179, 242)); width: 100%; height: 10px; display: block;'></span>
+        <div style='display: flex; justify-content: space-between;'>
+            <span>0</span>
+            <span>1</span>
+        </div>
+    </div>
+    </div> 
+    <style type='text/css'>
+    .maplegend .legend-scale ul {margin: 0; padding: 0; color: #0f0f0f;}
+    .maplegend .legend-scale ul li {list-style: none; line-height: 18px; margin-bottom: 1.5px;}
+    .maplegend ul.legend-labels li span {float: left; height: 12px; width: 12px; margin-right: 4.5px;}
+    .maplegend ul.legend-labels li svg {margin-right: 4.5px;}
+    </style>
+    {% endmacro %}
+    """
+
+
+
+
+    macro = MacroElement()
+    macro._template = Template(template)
+
+    macro.add_to(m)
+    return m
     

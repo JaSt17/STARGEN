@@ -5,7 +5,7 @@ import pandas as pd
 import pickle
 import os
 from label_samples_time_hexa import label_samples
-from vizualize import draw_hexagons, draw_migration_for_time_bin, draw_hexagons_with_values, draw_barriers
+from vizualize import *
 from func import *
 
 # Function to clear session state
@@ -184,6 +184,9 @@ if 'setup_done' in st.session_state and st.session_state['setup_done']:
     # check if there are any barriers
     if len(st.session_state['barrier_lines']) > 0:
         m = draw_barriers(st.session_state['barrier_lines'], m, threshold = st.session_state['threshold'])
+    # add the legend to the map
+    m = add_legend(m)
+        
     # Display the map in Streamlit
     folium_static(m, width=800, height=600)
     st.write(f"Number of isolated populations with no migration route found: {len(st.session_state['isolated_hex'])}")
