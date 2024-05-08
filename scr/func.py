@@ -244,7 +244,7 @@ def impute_missing_hexagons_multiple_runs(barrier_hex, hexagons, num_runs=5):
         # loop through all the barrier hexagons
         for hexagon in barrier_hex:
             # check if the neighbors are not in the barrier_hex
-            neighbors = [neighbor for neighbor in h3.k_ring(hexagon, 1) if neighbor not in barrier_hex_set]
+            neighbors = h3.k_ring(hexagon, 1)
             # loop over all remaining neighbors
             for neighbor in neighbors:
                 new_barrier_hex_count[neighbor] += 1
@@ -264,8 +264,6 @@ def impute_missing_hexagons_multiple_runs(barrier_hex, hexagons, num_runs=5):
         
     # delete the hexagons that are already in the barrier_hex
     imputed_hex = {hex: dist for hex, dist in imputed_hex.items() if hex not in barrier_hex}
-    # delete the hexagons that are already in the hexagons
-    imputed_hex = {hex: dist for hex, dist in imputed_hex.items() if hex not in hexagons}
 
     return imputed_hex
 

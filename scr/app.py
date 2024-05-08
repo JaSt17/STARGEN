@@ -143,7 +143,7 @@ if 'setup_done' in st.session_state and st.session_state['setup_done']:
                                                                                                             st.session_state['matrix'],
                                                                                                             st.session_state['isolated_threshold'])
     
-    if st.sidebar.checkbox("Show possible migration routes", False):
+    if st.sidebar.checkbox("Show possible migration routes & isolated populations", False):
         st.session_state['show_migration'] = True
     else:
         st.session_state['show_migration'] = False
@@ -170,13 +170,7 @@ if 'setup_done' in st.session_state and st.session_state['setup_done']:
     else:
         m = folium.Map(location=(lat, lon),  tiles="Cartodb Positron", zoom_start=zoom)
     # draw all hexagons for the selected time bin which hold the samples
-    m = draw_hexagons(hexagons, m, zoom_start=zoom)
-    # check if the migration routes should be displayed
-    if st.session_state['show_migration']:
-        # draw the migration lines for the isolated hexagons
-        m = draw_migration_for_time_bin(st.session_state['closest_populations'], m)
-    # highlight the isolated hexagons in red that can not be explained by migration
-    m = draw_hexagons(st.session_state['isolated_hex'], m, color='red', zoom_start=zoom, opacity=0.7, value='Isolated Population without possible migration route.')
+    m = draw_sample_hexagons(hexagons, m, zoom_start=zoom)
     # draw the hexagons barriers and barrier lines between direct neighbors
     m = draw_hexagons_with_values(st.session_state['barrier_hex'], m, threshold = st.session_state['threshold'])
     # draw the imputed hexagons
@@ -184,6 +178,12 @@ if 'setup_done' in st.session_state and st.session_state['setup_done']:
     # check if there are any barriers
     if len(st.session_state['barrier_lines']) > 0:
         m = draw_barriers(st.session_state['barrier_lines'], m, threshold = st.session_state['threshold'])
+    # check if the migration routes should be displayed
+    if st.session_state['show_migration']:
+        # draw the migration lines for the isolated hexagons
+        m = draw_migration_for_time_bin(st.session_state['closest_populations'], m)
+        # highlight the isolated hexagons in red that can not be explained by migration
+        m = draw_hexagons(st.session_state['isolated_hex'], m, color='red', zoom_start=zoom, opacity=0.7, value='Isolated Population without possible migration route.')
     # add the legend to the map
     m = add_legend(m)
         
