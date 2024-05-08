@@ -53,14 +53,14 @@ if 'setup_done' not in st.session_state:
         """)
     
     # Slider to choose the resolution and button to get information about it
-    st.session_state['resolution'] = st.slider('Select a resolution', 0, 5, 3, 1)
+    st.session_state['resolution'] = st.slider('Select a resolution', 1, 4, 3, 1)
     
     # button to get information about resolution
     if st.button("Information about resolution"):
         st.table(get_resolution_data())
         
     # Slider to choose the neighborhood size for the distance calculation
-    st.session_state['neighborhood_size'] = st.slider('Neighborhood range:', 1, 20, 10)
+    st.session_state['neighborhood_size'] = st.slider('Neighborhood range:', 1, 6* st.session_state['resolution'], 10)
     
         # button to get information about time bins
     if st.button("Information about Neighborhood range"):
@@ -176,7 +176,7 @@ if 'setup_done' in st.session_state and st.session_state['setup_done']:
         # draw the migration lines for the isolated hexagons
         m = draw_migration_for_time_bin(st.session_state['closest_populations'], m)
     # highlight the isolated hexagons in red that can not be explained by migration
-    m = draw_hexagons(st.session_state['isolated_hex'], m, color='red', zoom_start=zoom, opacity=0.7, value='Isolated Population without migration route.')
+    m = draw_hexagons(st.session_state['isolated_hex'], m, color='red', zoom_start=zoom, opacity=0.7, value='Isolated Population without possible migration route.')
     # draw the hexagons barriers and barrier lines between direct neighbors
     m = draw_hexagons_with_values(st.session_state['barrier_hex'], m, threshold = st.session_state['threshold'])
     # draw the imputed hexagons

@@ -2,6 +2,7 @@ from h3 import h3
 import folium
 from folium import Map, Element
 from func import normalize_distances
+from branca.element import Template, MacroElement
 import matplotlib.colors as mcolors
 import base64
 
@@ -133,18 +134,20 @@ def get_color_gradient():
     return cmap
 
 def add_legend(m):
-    from branca.element import Template, MacroElement
-
     # Create the legend template as an HTML element
     template = """
     {% macro html(this, kwargs) %}
     <div id='maplegend' class='maplegend' 
         style='position: absolute; z-index: 9999; background-color: rgba(255, 255, 255, 0.5);
-        border-radius: 6px; padding: 10px; font-size: 10.5px; right: 20px; top: 20px;'>     
+        border-radius: 6px; padding: 10px; font-size: 10.5px; width: 170px; height: 110px; right: 20px; top: 20px; cursor: move;'>     
     <div class='legend-scale'>
     <ul class='legend-labels'>
-        <li><span style='background: green; opacity: 0.5;'></span>Area with Samples</li>
-        <li><span style='background: red; opacity: 0.5;'></span>Isolated Population</li>
+        <li><svg height="12" width="10">
+            <polygon points="5,0 10,3.33 10,8.67 5,12 0,8.67 0,3.33" style="fill:green;opacity: 0.5;stroke:none" />
+            </svg>Area with Samples</li>
+        <li><svg height="12" width="10">
+            <polygon points="5,0 10,3.33 10,8.67 5,12 0,8.67 0,3.33" style="fill:red;opacity: 0.7;stroke:none" />
+            </svg>Isolated Population</li>
         <li><svg height="12" width="10"><line x1="0" y1="2" x2="10" y2="10" style="stroke:green;stroke-width:2" /></svg>Possible Migration Route</li>
     </ul>
     </div>
@@ -163,10 +166,53 @@ def add_legend(m):
     .maplegend ul.legend-labels li span {float: left; height: 12px; width: 12px; margin-right: 4.5px;}
     .maplegend ul.legend-labels li svg {margin-right: 4.5px;}
     </style>
+    <script type='text/javascript'>
+        dragElement(document.getElementById('maplegend'));
+
+        function dragElement(element) {
+            var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            if (document.getElementById(element.id + "header")) {
+        
+                document.getElementById(element.id + "header").onmousedown = dragMouseDown;
+            } else {
+            
+                element.onmousedown = dragMouseDown;
+            }
+
+            function dragMouseDown(e) {
+                e = e || window.event;
+                e.preventDefault();
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                document.onmouseup = closeDragElement;
+                document.onmousemove = elementDrag;
+            }
+
+            function elementDrag(e) {
+                e = e || window.event;
+                e.preventDefault();
+                pos1 = pos3 - e.clientX;
+                pos2 = pos4 - e.clientY;
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                element.style.top = (element.offsetTop - pos2) + "px";
+                element.style.left = (element.offsetLeft - pos1) + "px";
+            }
+
+            function closeDragElement() {
+                // stop moving when mouse button is released:
+                document.onmouseup = null;
+                document.onmousemove = null;
+            }
+        }
+    </script>
     {% endmacro %}
     """
+    macro = MacroElement()
+    macro._template = Template(template)
 
-
+    macro.add_to(m)
+    return m
 
 
     macro = MacroElement()
