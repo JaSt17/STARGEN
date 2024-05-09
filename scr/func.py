@@ -136,7 +136,7 @@ def get_time_bin_hexagons(df):
 
 
 # function that gets isolated hexagons and barriers for each time bin
-def get_isolated_hex_and_barriers(time_bin, hexagons, threshold):
+def get_isolated_hex_and_barriers(time_bin, hexagons, n, threshold):
     # directory to save the barrier lines and hexagons with their distances
     barrier_hex = defaultdict(list)
     barrier_lines = {}
@@ -161,11 +161,16 @@ def get_isolated_hex_and_barriers(time_bin, hexagons, threshold):
         else:
             # try to draw a line between the two hexagons
             try:
-                # if found add the distance to the dictionary
+                # if found add the hexagons to the barrier_hex dictionary and add the distance to the list
                 line = h3.h3_line(pair[0], pair[1])[1:-1]
                 for hex in line:
                     if hex not in hexagons:
-                        barrier_hex[hex].append(distance)
+                        # if the hexagon is already in the dictionary add the distance with a frequency of n-len(line) which accounts for the distance between the hexagons
+                        dist_array = [distance] * max(n-len(line),1)
+                        if hex in hexagons:
+                            barrier_hex[hex].extend(dist_array)
+                        else:
+                            barrier_hex[hex] = dist_array
             except:
                 continue
 
@@ -238,23 +243,25 @@ def impute_missing_hexagons_multiple_runs(barrier_hex, hexagons, num_runs=5):
         # convert the barrier_hex to sets for faster lookup
         barrier_hex_set = set(barrier_hex)
         # create a dictionary to store
-        new_barrier_hex_count = defaultdict(int)
-        new_barrier_hex_sum = defaultdict(int)
         new_barrier_hex = defaultdict(list)
         # loop through all the barrier hexagons
         for hexagon in barrier_hex:
             # check if the neighbors are not in the barrier_hex
-            neighbors = h3.k_ring(hexagon, 1)
+            neighbors = [hex for hex in h3.k_ring(hexagon, 1) if hex not in barrier_hex_set]
             # loop over all remaining neighbors
             for neighbor in neighbors:
-                new_barrier_hex_count[neighbor] += 1
-                new_barrier_hex_sum[neighbor] += barrier_hex[hexagon]
-                new_barrier_hex[neighbor] = round(new_barrier_hex_sum[neighbor] / new_barrier_hex_count[neighbor], 2)
+                if neighbor in new_barrier_hex:
+                    new_barrier_hex[neighbor].append(barrier_hex[hexagon])
+                else:
+                    new_barrier_hex[neighbor] = [barrier_hex[hexagon]]
+        output_hex = defaultdict(float)
         # delete the hexagons that have less than 3 neighbors
-        for hexagon in list(new_barrier_hex.keys()):
-            if new_barrier_hex_count[hexagon] <= 2:
-                del new_barrier_hex[hexagon]
-        return new_barrier_hex
+        for hexagon, distances in new_barrier_hex.items():
+            if len(distances) < 3:
+                continue
+            else:
+                output_hex[hexagon] = round(sum(distances)/len(distances), 2)
+        return output_hex
 
     # create a copy of the barrier_hex
     imputed_hex = barrier_hex.copy()
