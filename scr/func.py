@@ -2,6 +2,9 @@ import pandas as pd
 import numpy as np
 from h3 import h3
 from collections import defaultdict
+import matplotlib.pyplot as plt
+from scipy.spatial import Delaunay
+from pykrige.ok import OrdinaryKriging
 
 # function that reads the ancient DNA Annotations file into a data frame
 def read_df(path):
@@ -16,7 +19,7 @@ def calc_avg_dist(samples_hex1, samples_hex2, dist_matrix):
     return dist_matrix.loc[samples_hex1, samples_hex2].values.flatten().mean()
 
 
-def calc_neighbor_dist(hexagons, dist_matrix, time_bin_df, hex_col, k_neighbors = 1, scale_by_distance=False):
+def calc_neighbor_dist(hexagons, dist_matrix, time_bin_df, hex_col):
     # get the samples in each hexagon
     samples_in_hex = time_bin_df.groupby(hex_col)['ID'].apply(list).to_dict()
     # create a list of all values in samples_in_hex
@@ -25,55 +28,59 @@ def calc_neighbor_dist(hexagons, dist_matrix, time_bin_df, hex_col, k_neighbors 
     dist_matrix = dist_matrix.loc[all_samples, all_samples]
     # initialize the dictionary to store the average distances between neighboring hexagons
     averages = {}
-    # get the set of hexagons
-    hexagons_set = set(hexagons)
-    # initialize the cache for the average distances
-    avg_dist_cache = {}
-    # initialize the cache for the k-ring distances
-    k_ring_distances_cache = {}
-
-    for hexagon in hexagons:
-        neighbors = dict()
-        # get the neighbors of the hexagon in k distance
-        for k in range(1, k_neighbors+1):
-            # if the neighbors have not been calculated yet, calculate them
-            if (hexagon, k) not in k_ring_distances_cache:
-                k_ring_distances_cache[(hexagon, k)] = set(h for h in h3.k_ring_distances(hexagon, k)[k] if h in hexagons_set)
-            neighbors[k] = k_ring_distances_cache[(hexagon, k)]
-        # if there are no neighbors in k distance, and the user allows for more than k distance, get the neighbors in 20 distance
-        if [len(neighbors[k]) for k in neighbors].count(0) == len(neighbors):
-            k = k_neighbors + 1
-            while all(len(neighbors[k]) == 0 for k in neighbors) and k < 20:
-                # if the neighbors have not been calculated yet, calculate them
-                if (hexagon, k) not in k_ring_distances_cache:
-                    k_ring_distances_cache[(hexagon, k)] = set(h for h in h3.k_ring_distances(hexagon, k)[k] if h in hexagons_set)
-                neighbors[k] = k_ring_distances_cache[(hexagon, k)]
-                k += 1
+    
+    # function which gets the neighbors for all hexagons usin Delauny triangulation
+    def get_neighbors(hexagons):
+        # get the centroid of every hexagon
+        coord = []
+        for hex in hexagons:
+            coord.append(h3.h3_to_geo(hex))
+        # change coord to and hexagons to np array
+        coord = np.array(coord)
+        hexagons = np.array(hexagons)
+        # calc the Delaunay triangle
+        tri = Delaunay(coord)
+        # function to get the edges
+        def tris2edges(tris):
+            edges = set([])
+            for tri in tris:
+                for k in range(3):
+                    i,j = tri[k], tri[(k+1)%3]
+                    i,j = min(i,j), max(i,j)  # canonical edge representation
+                    edges.add((i,j))
+            return edges
+        # get the edges (pairs of hexagons)
+        edges = tris2edges(tri.simplices)
+        # use the edges to create a dictionary with all the neighborhoods that we want to calculate
+        neighbors = {}
+        for (i,j) in edges:
+            if hexagons[i] in neighbors:
+                neighbors[hexagons[i]].append(hexagons[j])
+            else:
+                neighbors[hexagons[i]] = [hexagons[j]]
+        return neighbors
+    
+    # get the neighbors for whom we will calculate the distances
+    neighbors = get_neighbors(hexagons)
                 
-        # calculate the average distance between the hexagon and its neighbors
-        for k in neighbors.keys():
-            for neighbor in neighbors[k]:
-                Ids_in_hexagon = samples_in_hex.get(hexagon, [])
-                Ids_in_neighbor = samples_in_hex.get(neighbor, [])
-                # get the pair of hexagons
-                pair = frozenset([hexagon, neighbor])
+    # calculate the average distance between the hexagon and its neighbors
+    for hexagon in neighbors.keys():
+        for neighbor in neighbors[hexagon]:
+            Ids_in_hexagon = samples_in_hex.get(hexagon, [])
+            Ids_in_neighbor = samples_in_hex.get(neighbor, [])
+            # get the pair of hexagons
+            pair = frozenset([hexagon, neighbor])
 
-                # check if the average distance has already been calculated
-                if pair not in avg_dist_cache:
-                    # calculate the average distance between the hexagon and its neighbor
-                    distance = calc_avg_dist(Ids_in_hexagon, Ids_in_neighbor, dist_matrix)
-                    # scale the distance by the distance between the hexagon and its neighbor
-                    if scale_by_distance:
-                        distance = distance / (0.9 + k/10)
-                    avg_dist_cache[pair] = distance
-                    
-                averages[pair] = round(avg_dist_cache[pair], 2)
+            # calculate the average distance between the hexagon and its neighbor
+            distance = calc_avg_dist(Ids_in_hexagon, Ids_in_neighbor, dist_matrix)
+                
+            averages[pair] = round(distance, 2)
 
     return averages
 
 
 # this function calculates the average distance between the each hexagon and its neighbors for each time bin
-def calc_dist_time_bin(df, dist_matrix=None, k_neighbors=1, scale_by_distance=False):
+def calc_dist_time_bin(df, dist_matrix=None):
     
     # get column name for the hexagons (it should be the only column with 'hex' in the name)
     hex_col = str(df.columns[df.columns.str.contains('hex')][0])
@@ -96,7 +103,7 @@ def calc_dist_time_bin(df, dist_matrix=None, k_neighbors=1, scale_by_distance=Fa
         hexagons = time_bin_df[hex_col].unique()
         
         # Calculate the average distance for each hexagon to its neighbors within the current time bin.
-        average_distances = calc_neighbor_dist(hexagons, dist_matrix, time_bin_df, hex_col, k_neighbors, scale_by_distance)
+        average_distances = calc_neighbor_dist(hexagons, dist_matrix, time_bin_df, hex_col)
 
         # Append the calculated average distances to the dictionary, using the time bin label as the key.
         averages.update({bin_label: average_distances})
@@ -136,7 +143,7 @@ def get_time_bin_hexagons(df):
 
 
 # function that gets isolated hexagons and barriers for each time bin
-def get_isolated_hex_and_barriers(time_bin, hexagons, n, threshold):
+def get_isolated_hex_and_barriers(time_bin, hexagons, threshold):
     # directory to save the barrier lines and hexagons with their distances
     barrier_hex = defaultdict(list)
     barrier_lines = {}
@@ -165,12 +172,10 @@ def get_isolated_hex_and_barriers(time_bin, hexagons, n, threshold):
                 line = h3.h3_line(pair[0], pair[1])[1:-1]
                 for hex in line:
                     if hex not in hexagons:
-                        # if the hexagon is already in the dictionary add the distance with a frequency of n-len(line) which accounts for the distance between the hexagons
-                        dist_array = [distance] * max(n-len(line),1)
                         if hex in hexagons:
-                            barrier_hex[hex].extend(dist_array)
+                            barrier_hex[hex].extend(distance)
                         else:
-                            barrier_hex[hex] = dist_array
+                            barrier_hex[hex] = [distance]
             except:
                 continue
 
@@ -192,42 +197,44 @@ def find_closest_population(df, time_bin, isolated_hex, dist_matrix, threshold):
     df['AgeGroupTuple'] = df['AgeGroup'].apply(lambda x: tuple(map(int, x.split('-'))))
     # Sort the unique age group tuples to process them in a chronological order.
     time_bins = sorted(df['AgeGroupTuple'].unique())
-    # get the samples in the time bin of interest
+    # Get the samples in the time bin of interest
     time_bin_df = df[df['AgeGroupTuple'] == time_bins[time_bin]]
-    # get column name for the hexagons (it should be the only column with 'hex' in the name)
+    # Get column name for the hexagons (it should be the only column with 'hex' in the name)
     hex_col = time_bin_df.filter(like='hex').columns[0]
-    # get all unique hexagons from the dataframe
+    # Get all unique hexagons from the dataframe
     hexagons = time_bin_df[hex_col].unique()
-    # get the samples in each hexagon
+    # Get the samples in each hexagon
     samples_in_hex = time_bin_df.groupby(hex_col)['ID'].apply(list).to_dict()
-    all_samples = [sample for samples in samples_in_hex.values() for sample in samples]
-    # create a submatrix of the distance matrix for the samples in the hexagons
+    
+    # Create a submatrix of the distance matrix for the samples in the hexagons
+    all_samples = sum(samples_in_hex.values(), [])
     dist_matrix = dist_matrix.loc[all_samples, all_samples]
-    # empty dictrionary to hold the distances between the hexagons
+    
+    # Prepare dictionary to hold the distances between the hexagons
     closest_populations = {}
-    # empty list to hold the isolated hexagons that have no migration
+    # List to hold the isolated hexagons that have no migration
     new_isolated_hex = []
     
-    # loop over all isolated hexagons
+    # Loop over all isolated hexagons
     for iso in isolated_hex:
-        # reset the min_dist and closest_hex
-        closest_hex = None
+        # Initialize the minimum distance to the threshold
         min_dist = threshold
-        # check the distance to every hexagon in that time bin
+        closest_hex = None
+        
+        # Calculate distances to every hexagon in the time bin
+        Ids_in_iso = samples_in_hex.get(iso, [])
         for hex in hexagons:
-            # skip if the hexagon is the same as the isolated hexagon
             if hex == iso:
                 continue
-            
-            Ids_in_hexagon = samples_in_hex.get(iso, [])
+
             Ids_in_neighbor = samples_in_hex.get(hex, [])
-            # calculate the average distance between the hexagon and its neighbor
-            distance = calc_avg_dist(Ids_in_hexagon, Ids_in_neighbor, dist_matrix)
-            # check if the distance is lower than the current minimum distance
+            distance = calc_avg_dist(Ids_in_iso, Ids_in_neighbor, dist_matrix)
+            
             if distance < min_dist:
                 min_dist = distance
                 closest_hex = hex
-        # Add closest hexagon
+        
+        # Add the closest hexagon if found
         if closest_hex is not None:
             pair = frozenset([iso, closest_hex])
             closest_populations[pair] = round(min_dist, 2)
@@ -237,42 +244,80 @@ def find_closest_population(df, time_bin, isolated_hex, dist_matrix, threshold):
     return closest_populations, new_isolated_hex
 
 
-def impute_missing_hexagons_multiple_runs(barrier_hex, hexagons, num_runs=5):
-    # impute the missing hexagons in the barrier_hex
-    def impute_missing_hexagons(barrier_hex):
-        # convert the barrier_hex to sets for faster lookup
-        barrier_hex_set = set(barrier_hex)
-        # create a dictionary to store
-        new_barrier_hex = defaultdict(list)
-        # loop through all the barrier hexagons
-        for hexagon in barrier_hex:
-            # check if the neighbors are not in the barrier_hex
-            neighbors = [hex for hex in h3.k_ring(hexagon, 1) if hex not in barrier_hex_set]
-            # loop over all remaining neighbors
-            for neighbor in neighbors:
-                if neighbor in new_barrier_hex:
-                    new_barrier_hex[neighbor].append(barrier_hex[hexagon])
-                else:
-                    new_barrier_hex[neighbor] = [barrier_hex[hexagon]]
-        output_hex = defaultdict(float)
-        # delete the hexagons that have less than 3 neighbors
-        for hexagon, distances in new_barrier_hex.items():
-            if len(distances) < 3:
-                continue
-            else:
-                output_hex[hexagon] = round(sum(distances)/len(distances), 2)
-        return output_hex
+def impute_missing_hexagons(barrier_hex, num_runs=5):
+    # Functions that are needed within the function:
+    # Function to convert hexagon indices to lat/lon coordinates
+    def hex_to_latlon(hex_index):
+        return h3.h3_to_geo(hex_index)
 
-    # create a copy of the barrier_hex
-    imputed_hex = barrier_hex.copy()
-    # loop through the number of runs
-    for _ in range(num_runs):
-        imputed_hex.update(impute_missing_hexagons(imputed_hex))
+    # Function to perform Kriging interpolation
+    def kriging_interpolation(known_points, unknown_points):
+        known_coords = np.array([hex_to_latlon(h) for h in known_points.keys()])
+        known_values = np.array(list(known_points.values()))
+
+        # Extract latitudes and longitudes separately for the Kriging function
+        lats = known_coords[:, 0]
+        lons = known_coords[:, 1]
+
+        # Create OrdinaryKriging object
+        OK = OrdinaryKriging(lons, lats, known_values, variogram_model='linear', verbose=False, enable_plotting=False)
+
+        # Interpolate unknown points
+        unknown_coords = np.array([hex_to_latlon(h) for h in unknown_points])
+        unknown_lats = unknown_coords[:, 0]
+        unknown_lons = unknown_coords[:, 1]
+
+        interpolated_values, _ = OK.execute('points', unknown_lons, unknown_lats)
+        return dict(zip(unknown_points, np.round(interpolated_values, 2)))
+    
+    # Function to find unknown hexagons that are close to known hexagons
+    def get_unknown_hexagons(barrier_hex, num_runs=10):
+        known_hex_set = set(barrier_hex.keys())
+        unknown_hex_set = set()
+
+        for _ in range(num_runs):
+            # Track all unknown hexagons to process
+            unknown_hex_dict = {}
+            
+            for hexagon in known_hex_set:
+                # Find neighbors not in known hex set
+                neighbors = [hex for hex in h3.k_ring(hexagon, 1) if hex not in known_hex_set]
+                for neighbor in neighbors:
+                    if neighbor in unknown_hex_dict:
+                        unknown_hex_dict[neighbor] += 1
+                    else:
+                        unknown_hex_dict[neighbor] = 1
+            
+            # keep only hexagons with at least 3 known neighbors
+            unknown_hex_dict = {hex: count for hex, count in unknown_hex_dict.items() if count >= 3}
+            # add the unknown hexagons to the sets
+            known_hex_set.update(unknown_hex_dict.keys())
+            unknown_hex_set.update(unknown_hex_dict.keys())
         
-    # delete the hexagons that are already in the barrier_hex
-    imputed_hex = {hex: dist for hex, dist in imputed_hex.items() if hex not in barrier_hex}
-
+        return list(unknown_hex_set)
+    
+    # Main part of the function:
+    new_hex = barrier_hex.copy()
+    known_hex_set = set(new_hex.keys())
+    unknown_hexagons = get_unknown_hexagons(barrier_hex, num_runs)
+        
+    imputed_hex = kriging_interpolation(new_hex, unknown_hexagons)
+    
     return imputed_hex
+
+# Function that converts all distances to drawable lines
+def get_distance_lines(time_bin):
+    lines = {}
+    for key,value in time_bin.items():
+        key = list(key)
+        hex1 = key[0]
+        hex2 = key[1]
+        cord1 = h3.h3_to_geo(hex1)
+        cord2 = h3.h3_to_geo(hex2)
+        # get the pair of dots that the two hexagons share
+        shared_boundary = frozenset([cord1, cord2])
+        lines[shared_boundary] = value
+    return lines
 
         
 # function that normalizes the distance values on a interval from 0 to 1

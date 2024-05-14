@@ -36,7 +36,7 @@ if 'setup_done' not in st.session_state:
         st.title('GeoGenTrack')
     
     # Slider to choose the number of time bins and button to get information about it
-    st.session_state['time_bins'] = st.slider('Select a number of time bins', 1, 20, 11, 1)
+    st.session_state['time_bins'] = st.slider('Select a number of time bins', 1, 19, 11, 1)
     # Checkbox to enable same time bin length
     st.session_state['same_age_range'] = st.checkbox('Same age range for each time bin', value=True)
 
@@ -58,16 +58,6 @@ if 'setup_done' not in st.session_state:
     # button to get information about resolution
     if st.button("Information about resolution"):
         st.table(get_resolution_data())
-        
-    # Slider to choose the neighborhood size for the distance calculation
-    st.session_state['neighborhood_size'] = st.slider('Neighborhood range:', 1, 6* st.session_state['resolution'], 10)
-    
-        # button to get information about time bins
-    if st.button("Information about Neighborhood range"):
-            st.write("""
-    The neighborhood range is the number of hexagons that are considered as neighbors for each hexagon. For example, if the neighborhood range is 5,
-    the average genetic distance between a hexagon and all hexagons in a range of 5 hexagons will be calculated. Increasing the neighborhood range will increase the computation time.
-        """)
 
     # Button to run the tool
     if st.button('Run'):
@@ -93,7 +83,7 @@ if 'setup_done' in st.session_state and st.session_state['setup_done']:
         st.session_state['df'] = label_samples(os.getcwd(),st.session_state['time_bins'],st.session_state['resolution'], st.session_state['same_age_range'])
     if 'time_bins_dist' not in st.session_state:
         # calculate the average distances between neighboring hexagons for each time bin with the given parameters
-        st.session_state['time_bins_dist'] = calc_dist_time_bin(st.session_state['df'], st.session_state['matrix'], st.session_state['neighborhood_size'], False)
+        st.session_state['time_bins_dist'] = calc_dist_time_bin(st.session_state['df'], st.session_state['matrix'])
     
     # rename the time bins to display them in the dropdown
     time_bins = rename_time_bins(st.session_state['df'])
@@ -129,9 +119,9 @@ if 'setup_done' in st.session_state and st.session_state['setup_done']:
     # check if the threshold or the selected time bin has changed
     if new_isolated_threshold != st.session_state['isolated_threshold'] or new_selected_time_bin_id != st.session_state['selected_time_bin_id']:
         # get the isolated hexagons and barriers for the selected time bin
-        st.session_state['isolated_hex'], st.session_state['barrier_lines'], st.session_state['barrier_hex'] = get_isolated_hex_and_barriers(time_bin, hexagons,st.session_state['neighborhood_size'], st.session_state['isolated_threshold'])
+        st.session_state['isolated_hex'], st.session_state['barrier_lines'], st.session_state['barrier_hex'] = get_isolated_hex_and_barriers(time_bin, hexagons, st.session_state['isolated_threshold'])
         # get imputed hexagons
-        st.session_state['imputed_hex'] = impute_missing_hexagons_multiple_runs(st.session_state['barrier_hex'], hexagons, num_runs=10)
+        st.session_state['imputed_hex'] = impute_missing_hexagons(st.session_state['barrier_hex'], num_runs=10)
         # change the threshold for isolated populations
         st.session_state['isolated_threshold'] = new_isolated_threshold
         # change the selected time bin id
@@ -147,6 +137,11 @@ if 'setup_done' in st.session_state and st.session_state['setup_done']:
         st.session_state['show_migration'] = True
     else:
         st.session_state['show_migration'] = False
+        
+    if st.sidebar.checkbox("Show distance lines", False):
+        st.session_state['show_lines'] = True
+    else:
+        st.session_state['show_lines'] = False
     
     # set an initial map state if it does not exist
     if 'map_state' not in st.session_state:
@@ -171,10 +166,15 @@ if 'setup_done' in st.session_state and st.session_state['setup_done']:
         m = folium.Map(location=(lat, lon),  tiles="Cartodb Positron", zoom_start=zoom)
     # draw all hexagons for the selected time bin which hold the samples
     m = draw_sample_hexagons(hexagons, m, zoom_start=zoom)
-    # draw the hexagons barriers and barrier lines between direct neighbors
-    m = draw_hexagons_with_values(st.session_state['barrier_hex'], m, threshold = st.session_state['threshold'])
-    # draw the imputed hexagons
-    m = draw_hexagons_with_values(st.session_state['imputed_hex'], m, threshold = st.session_state['threshold'], imputed=True)
+    # check if the distance lines should be displayed and draw lines or distance hexagons
+    if st.session_state['show_lines']:
+        lines = get_distance_lines(time_bin)
+        m = draw_barriers(lines, m)
+    else:
+        # draw the hexagons barriers and barrier lines between direct neighbors
+        m = draw_hexagons_with_values(st.session_state['barrier_hex'], m, threshold = st.session_state['threshold'])
+        # draw the imputed hexagons
+        m = draw_hexagons_with_values(st.session_state['imputed_hex'], m, threshold = st.session_state['threshold'], imputed=True)
     # check if there are any barriers
     if len(st.session_state['barrier_lines']) > 0:
         m = draw_barriers(st.session_state['barrier_lines'], m, threshold = st.session_state['threshold'])
