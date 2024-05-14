@@ -8,7 +8,8 @@ To do so please run the setup script on the system of choice
 On Linux run:
 
 ```{bash}
-setup.sh
+chmod +x setup.sh
+./setup.sh
 ```
 
 On Windows run:

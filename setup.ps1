@@ -12,7 +12,8 @@ $CONDA_PACKAGES = @(
     "scipy=1.12.0",
     "h3-py=3.7.7",
     "matplotlib=3.8.0",
-    "openpyxl=3.1.2"
+    "openpyxl=3.1.2", 
+    "pykrige=1.7.1"
 )
 
 # Create the Conda environment with Python version
