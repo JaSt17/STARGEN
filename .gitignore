@@ -4,3 +4,4 @@
 1_dist_matrix/eucl_dist_predicted.pkl
 1_dist_matrix/haversine_dist.pkl
 scr/notebooks/
+scr/__pycache__/
