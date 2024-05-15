@@ -145,7 +145,7 @@ def get_time_bin_hexagons(df):
 
 
 # function that gets isolated hexagons and barriers for each time bin
-def get_isolated_hex_and_barriers(time_bin, hexagons, threshold, allowed_distance=15):
+def get_isolated_hex_and_barriers(time_bin, hexagons, threshold, allowed_distance=12):
     # directory to save the barrier lines and hexagons with their distances
     barrier_hex = defaultdict(list)
     barrier_lines = defaultdict(float)
@@ -175,16 +175,15 @@ def get_isolated_hex_and_barriers(time_bin, hexagons, threshold, allowed_distanc
                 # only add distances if the line is shorter than the allowed distance
                 if len(line) <= allowed_distance:
                     for hex in line:
-                        if hex not in hexagons:
-                            if hex in barrier_hex:
-                                barrier_hex[hex].extend(distance)
-                            else:
-                                barrier_hex[hex] = [distance]
+                        if hex in barrier_hex:
+                            barrier_hex[hex].append(distance)
+                        else:
+                            barrier_hex[hex] = [distance]
             except:
                 continue
 
     # Calculate the average distance for each hexagon and round it to 2 decimal places
-    barrier_hex = {hex: round(sum(distances)/len(distances), 2) for hex, distances in barrier_hex.items()}
+    barrier_hex = {hex: round((sum(distances)/len(distances)), 2) for hex, distances in barrier_hex.items()}
     
     # get all distances for every hexagon
     for pair in time_bin:
