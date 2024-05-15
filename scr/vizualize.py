@@ -147,13 +147,16 @@ def draw_migration_for_time_bin(time_bin, m, color="green"):
 def get_color_gradient():
     # Define the colors for the colormap
     colors = [
-    (0.95, 0.87, 0.55),
-    (0.87, 0.69, 0.38),
-    (0.92, 0.66, 0.22),
-    (0.66, 0.72, 0.73),
-    (0.48, 0.82, 0.95),
-    (0.36, 0.70, 0.95)
-]
+        (0.95, 0.87, 0.55),  # Sand color yellow
+        (0.92, 0.78, 0.48),  # Intermediate yellow-brown
+        (0.87, 0.69, 0.38),  # Yellow-brown tone
+        (0.78, 0.62, 0.34),  # Intermediate brown
+        (0.66, 0.72, 0.73),  # Light blue-gray
+        (0.57, 0.76, 0.85),  # Intermediate light blue
+        (0.48, 0.82, 0.95),  # Light blue
+        (0.42, 0.76, 0.91),  # Intermediate turquoise
+        (0.36, 0.70, 0.95)   # Turquoise blue
+    ]
 
     # Create the colormap
     cmap = mcolors.LinearSegmentedColormap.from_list("costum_color_gradient", colors)
@@ -180,7 +183,18 @@ def add_legend(m):
     </div>
     <div class='legend-gradient'>
         <span style="font-weight: bold;">Genetic Distances</span>
-        <span style='background: linear-gradient(to right,rgb(242, 222, 140), rgb(223, 175, 96), rgb(234, 168, 56), rgb(168, 183, 185),rgb(122, 209, 242), rgb(92, 179, 242)); width: 100%; height: 10px; display: block;'></span>
+        <span style='background: linear-gradient(to right, 
+            rgb(242, 222, 140),  /* Sand color yellow */
+            rgb(235, 199, 123),  /* Intermediate yellow-brown */
+            rgb(222, 176, 97),   /* Yellow-brown tone */
+            rgb(199, 159, 86),   /* Intermediate brown */
+            rgb(169, 184, 186),  /* Light blue-gray */
+            rgb(145, 194, 218),  /* Intermediate light blue */
+            rgb(123, 209, 242),  /* Light blue */
+            rgb(107, 194, 232),  /* Intermediate turquoise */
+            rgb(92, 178, 242)    /* Turquoise blue */
+        );
+ width: 100%; height: 10px; display: block;'></span>
         <div style='display: flex; justify-content: space-between;'>
             <span>0</span>
             <span>1</span>

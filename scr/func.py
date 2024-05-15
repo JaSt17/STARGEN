@@ -5,6 +5,8 @@ from collections import defaultdict
 import matplotlib.pyplot as plt
 from scipy.spatial import Delaunay
 from pykrige.ok import OrdinaryKriging
+from haversine import haversine
+from scipy.optimize import curve_fit
 
 # function that reads the ancient DNA Annotations file into a data frame
 def read_df(path):
@@ -143,10 +145,10 @@ def get_time_bin_hexagons(df):
 
 
 # function that gets isolated hexagons and barriers for each time bin
-def get_isolated_hex_and_barriers(time_bin, hexagons, threshold):
+def get_isolated_hex_and_barriers(time_bin, hexagons, threshold, allowed_distance=15):
     # directory to save the barrier lines and hexagons with their distances
     barrier_hex = defaultdict(list)
-    barrier_lines = {}
+    barrier_lines = defaultdict(float)
     # dictionary to save hexagons and their direct neighbor distances to check if their was a migration barrier
     hex_dist_to_direct_neighbors = defaultdict(list)
     # loop over all pairs of hexagons in the time bin
@@ -168,25 +170,32 @@ def get_isolated_hex_and_barriers(time_bin, hexagons, threshold):
         else:
             # try to draw a line between the two hexagons
             try:
-                # if found add the hexagons to the barrier_hex dictionary and add the distance to the list
+                # if found a line, get the hexagons in the line
                 line = h3.h3_line(pair[0], pair[1])[1:-1]
-                for hex in line:
-                    if hex not in hexagons:
-                        if hex in hexagons:
-                            barrier_hex[hex].extend(distance)
-                        else:
-                            barrier_hex[hex] = [distance]
+                # only add distances if the line is shorter than the allowed distance
+                if len(line) <= allowed_distance:
+                    for hex in line:
+                        if hex not in hexagons:
+                            if hex in barrier_hex:
+                                barrier_hex[hex].extend(distance)
+                            else:
+                                barrier_hex[hex] = [distance]
             except:
                 continue
 
     # Calculate the average distance for each hexagon and round it to 2 decimal places
     barrier_hex = {hex: round(sum(distances)/len(distances), 2) for hex, distances in barrier_hex.items()}
-        
-    # Create a list of isolated hexagons
-    # add isolated hexagons that have direct neighbors
+    
+    # get all distances for every hexagon
+    for pair in time_bin:
+        distance = time_bin[pair]
+        for hex in pair:
+            if hex not in hex_dist_to_direct_neighbors:
+                hex_dist_to_direct_neighbors[hex] = [distance]
+            else:
+                hex_dist_to_direct_neighbors[hex].append(distance)
+                
     isolated_hex = [hex for hex, distances in hex_dist_to_direct_neighbors.items() if all(x >= threshold for x in distances)]
-    # add isolated hexagons that have no direct neighbors
-    isolated_hex += [hex for hex in hexagons if hex not in hex_dist_to_direct_neighbors and all(barrier_hex[n] >= threshold for n in h3.k_ring_distances(hex, 1)[1] if n in barrier_hex)]
     
     return isolated_hex, barrier_lines, barrier_hex
 
@@ -207,7 +216,7 @@ def find_closest_population(df, time_bin, isolated_hex, dist_matrix, threshold):
     samples_in_hex = time_bin_df.groupby(hex_col)['ID'].apply(list).to_dict()
     
     # Create a submatrix of the distance matrix for the samples in the hexagons
-    all_samples = sum(samples_in_hex.values(), [])
+    all_samples = [item for sublist in samples_in_hex.values() for item in sublist]
     dist_matrix = dist_matrix.loc[all_samples, all_samples]
     
     # Prepare dictionary to hold the distances between the hexagons
@@ -305,6 +314,50 @@ def impute_missing_hexagons(barrier_hex, num_runs=5):
     
     return imputed_hex
 
+
+# function scales genetic distances by the estimated genetic differents modeled by logistic growth of the geographic distances
+def scale_distances(time_bin):
+    # function that gets the km distance between two hexagons
+    def get_km_distance(hex1, hex2):
+            # get the centroid of the hexagons
+            coord1 = h3.h3_to_geo(hex1)
+            coord2 = h3.h3_to_geo(hex2)
+            # get the distance between the two points
+            return haversine(coord1, coord2)
+
+    # get km distances between the hexagons
+    km_time_bin = {pair: get_km_distance(*pair) for pair in time_bin}
+    
+    # normalize the km distances and genetic distances between 0 and 1 
+    km_time_bin = normalize_distances(km_time_bin)
+    time_bin = normalize_distances(time_bin)
+    
+    # get numpy arrays of genetic distances and km distances
+    gen_distances = np.array(list(time_bin.values()))
+    geo_distances = np.array(list(km_time_bin.values()))
+    
+    # Define the logistic growth function
+    def logistic_growth(x, L, k, x_0):
+        return L / (1 + np.exp(-k * (x - x_0)))
+
+    # Initial guesses for the parameters
+    initial_guesses = [max(gen_distances), 1, np.median(geo_distances)]
+
+    # Fit the logistic growth function to the data
+    params, covariance = curve_fit(logistic_growth, geo_distances, gen_distances, p0=initial_guesses)
+
+    # Extract the fitted parameters
+    L, k, x_0 = params
+    
+    # Use the predicted parameters to scale the genetic distances according to their geographic distance
+    output = {}
+    
+    for pair in time_bin:
+        hex1, hex2 = pair
+        output[pair] = time_bin[pair]/logistic_growth(get_km_distance(hex1, hex2), *params)
+    
+    return output
+
 # Function that converts all distances to drawable lines
 def get_distance_lines(time_bin):
     lines = {}
@@ -316,7 +369,7 @@ def get_distance_lines(time_bin):
         cord2 = h3.h3_to_geo(hex2)
         # get the pair of dots that the two hexagons share
         shared_boundary = frozenset([cord1, cord2])
-        lines[shared_boundary] = value
+        lines[shared_boundary] = round(value, 2)
     return lines
 
         

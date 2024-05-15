@@ -101,7 +101,7 @@ if 'setup_done' in st.session_state and st.session_state['setup_done']:
     # get the distance values for the selected time bin
     time_bin = st.session_state['time_bins_dist'][selected_time_bin]
     # normalize the distances for each timebin
-    time_bin = normalize_distances(time_bin)
+    time_bin = scale_distances(time_bin)
     
     # initialize the threshold for the distance values to display and the threshold for isolated populations
     if 'threshold' not in st.session_state:
@@ -121,7 +121,7 @@ if 'setup_done' in st.session_state and st.session_state['setup_done']:
         # get the isolated hexagons and barriers for the selected time bin
         st.session_state['isolated_hex'], st.session_state['barrier_lines'], st.session_state['barrier_hex'] = get_isolated_hex_and_barriers(time_bin, hexagons, st.session_state['isolated_threshold'])
         # get imputed hexagons
-        st.session_state['imputed_hex'] = impute_missing_hexagons(st.session_state['barrier_hex'], num_runs=10)
+        st.session_state['imputed_hex'] = impute_missing_hexagons(st.session_state['barrier_hex'], num_runs=5)
         # change the threshold for isolated populations
         st.session_state['isolated_threshold'] = new_isolated_threshold
         # change the selected time bin id
