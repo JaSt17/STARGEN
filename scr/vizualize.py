@@ -33,13 +33,13 @@ def split_hexagon_if_needed(hexagon):
         return [boundary]
     
 # function that empty hexagons on a map with only the boarders for the hexagons which hold sampels
-def draw_sample_hexagons(hexagons, m=None, color='grey', zoom_start=1):
+def draw_sample_hexagons(hex_dict, m=None, color='grey', zoom_start=1):
     # Create a map if it is not provided
     if m is None:
         m = folium.Map(location=(0.0, 0.0), tiles="Esri worldstreetmap", zoom_start=zoom_start)
 
     # Plot hexagons
-    for hexagon in hexagons:
+    for hexagon in hex_dict.keys():
         # split the hexagon if it crosses the antimeridian
         parts = split_hexagon_if_needed(hexagon)
         for part in parts:
@@ -47,7 +47,11 @@ def draw_sample_hexagons(hexagons, m=None, color='grey', zoom_start=1):
                 locations=part,
                 weight=1,
                 color=color,
+                fill_opacity=0.0,
+                fill=True
             )
+            # add tooltip with internal hexagon distance
+            polygon.add_child(folium.Tooltip(f"Internal average sample distance: {hex_dict[hexagon]}"))
             polygon.add_to(m)
     return m
 
@@ -71,7 +75,7 @@ def draw_hexagons(hexagons, m=None, color='darkgreen', zoom_start=1, value=None,
                 fill_opacity=opacity,
                 fill=True
             )
-            if value:
+            if value >= 0:
                 if imputed:
                     polygon.add_child(folium.Tooltip(f"{value} (Imputed)"))
                 else:
@@ -94,6 +98,7 @@ def draw_hexagons_with_values(hex_dict, m=None, zoom_start=1, threshold=0.0, imp
         col = mcolors.to_hex(cmap(value))
         m = draw_hexagons([hexagon], m, color=col, zoom_start=zoom_start, value=value, imputed=imputed)
     return m
+
 
 def draw_barriers(barriers_dict, m=None, zoom_start=1, threshold=0.0):
     barriers = barriers_dict.keys()

@@ -67,6 +67,7 @@ def calc_neighbor_dist(hexagons, dist_matrix, time_bin_df, hex_col):
                 
     # calculate the average distance between the hexagon and its neighbors
     for hexagon in neighbors.keys():
+        neighbors[hexagon].append(hexagon)
         for neighbor in neighbors[hexagon]:
             Ids_in_hexagon = samples_in_hex.get(hexagon, [])
             Ids_in_neighbor = samples_in_hex.get(neighbor, [])
@@ -75,7 +76,7 @@ def calc_neighbor_dist(hexagons, dist_matrix, time_bin_df, hex_col):
 
             # calculate the average distance between the hexagon and its neighbor
             distance = calc_avg_dist(Ids_in_hexagon, Ids_in_neighbor, dist_matrix)
-                
+
             averages[pair] = round(distance, 2)
 
     return averages
@@ -112,6 +113,17 @@ def calc_dist_time_bin(df, dist_matrix=None):
 
     # Return the dictionary with the average distances between neighboring hexagons for each time bin.
     return averages
+
+# function to get the hexagons for each time bin that hold the samples with their internal distances
+def get_hexagons(time_bin):
+    hexagons = {}
+    new_time_bin = {}
+    for pair in time_bin.keys():
+        if len(pair) == 1:
+            hexagons[list(pair)[0]] = time_bin[pair]
+        else:
+            new_time_bin[pair] = time_bin[pair]
+    return new_time_bin, hexagons
 
 
 # function that gets the hexagons for each time bin
@@ -309,7 +321,7 @@ def impute_missing_hexagons(barrier_hex, num_runs=5):
         return dict(zip(unknown_points, np.round(interpolated_values, 2)))
     
     # Function to find unknown hexagons that are close to known hexagons
-    def get_unknown_hexagons(barrier_hex, num_runs=10):
+    def get_unknown_hexagons(barrier_hex, num_runs=5):
         known_hex_set = set(barrier_hex.keys())
         unknown_hex_set = set()
 
@@ -335,12 +347,14 @@ def impute_missing_hexagons(barrier_hex, num_runs=5):
         return list(unknown_hex_set)
     
     # Main part of the function:
-    new_hex = barrier_hex.copy()
-    known_hex_set = set(new_hex.keys())
-    unknown_hexagons = get_unknown_hexagons(barrier_hex, num_runs)
+    known_hex = barrier_hex.copy()
+    known_hex_set = set(known_hex.keys())
+    unknown_hexagons = get_unknown_hexagons(known_hex, num_runs)
+    try:
+        imputed_hex = kriging_interpolation(known_hex, unknown_hexagons)
+    except:
+        imputed_hex = {}
         
-    imputed_hex = kriging_interpolation(new_hex, unknown_hexagons)
-    
     return imputed_hex
 
 

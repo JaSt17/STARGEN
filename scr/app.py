@@ -96,10 +96,10 @@ if 'setup_done' in st.session_state and st.session_state['setup_done']:
         st.session_state['selected_time_bin_id'] = 1
     new_selected_time_bin_id = time_bins.index(selected_time_bin)
 
-    # get the hexagons and distance values for the selected time bin
-    hexagons = time_bins_hexagons[selected_time_bin]
     # get the distance values for the selected time bin
     time_bin = st.session_state['time_bins_dist'][selected_time_bin]
+    # get the hexagons and its internal distances for the selected time bin
+    time_bin, hexagons = get_hexagons(time_bin)
     # normalize the distances for each timebin
     time_bin = scale_distances(time_bin)
     
@@ -119,9 +119,9 @@ if 'setup_done' in st.session_state and st.session_state['setup_done']:
     # check if the threshold or the selected time bin has changed
     if new_isolated_threshold != st.session_state['isolated_threshold'] or new_selected_time_bin_id != st.session_state['selected_time_bin_id']:
         # get the isolated hexagons and barriers for the selected time bin
-        st.session_state['isolated_hex'], st.session_state['barrier_lines'], st.session_state['barrier_hex'] = get_isolated_hex_and_barriers(time_bin, hexagons, st.session_state['isolated_threshold'], st.session_state['resolution']*4)
+        st.session_state['isolated_hex'], st.session_state['barrier_lines'], st.session_state['barrier_hex'] = get_isolated_hex_and_barriers(time_bin, hexagons, st.session_state['isolated_threshold'], st.session_state['resolution']**2+3)
         # get imputed hexagons
-        st.session_state['imputed_hex'] = impute_missing_hexagons(st.session_state['barrier_hex'], num_runs=5)
+        st.session_state['imputed_hex'] = impute_missing_hexagons(st.session_state['barrier_hex'], num_runs=st.session_state['resolution']*2)
         # change the threshold for isolated populations
         st.session_state['isolated_threshold'] = new_isolated_threshold
         # change the selected time bin id
@@ -164,10 +164,9 @@ if 'setup_done' in st.session_state and st.session_state['setup_done']:
         m = folium.Map(location=(lat, lon), tiles="Esri worldstreetmap", zoom_start=zoom)
     else:
         m = folium.Map(location=(lat, lon),  tiles="Cartodb Positron", zoom_start=zoom)
-    # draw all hexagons for the selected time bin which hold the samples
-    m = draw_sample_hexagons(hexagons, m, zoom_start=zoom)
     # check if the distance lines should be displayed and draw lines or distance hexagons
     if st.session_state['show_lines']:
+        m = draw_sample_hexagons(hexagons, m, zoom_start=zoom)
         lines = get_distance_lines(time_bin)
         m = draw_barriers(lines, m)
     else:
@@ -175,6 +174,8 @@ if 'setup_done' in st.session_state and st.session_state['setup_done']:
         m = draw_hexagons_with_values(st.session_state['barrier_hex'], m, threshold = st.session_state['threshold'])
         # draw the imputed hexagons
         m = draw_hexagons_with_values(st.session_state['imputed_hex'], m, threshold = st.session_state['threshold'], imputed=True)
+        # draw all hexagons for the selected time bin which hold the samples
+        m = draw_sample_hexagons(hexagons, m, zoom_start=zoom)
     # check if there are any barriers
     if len(st.session_state['barrier_lines']) > 0:
         m = draw_barriers(st.session_state['barrier_lines'], m, threshold = st.session_state['threshold'])
