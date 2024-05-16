@@ -5,6 +5,8 @@ from func import normalize_distances
 from branca.element import Template, MacroElement
 import matplotlib.colors as mcolors
 import base64
+from folium.plugins import AntPath
+
 
 # function that splits a hexagon if it crosses the antimeridian
 def split_hexagon_if_needed(hexagon):
@@ -138,9 +140,10 @@ def draw_migration_for_time_bin(time_bin, m, color="green"):
         
         # Loop over all lines and draw them on the map
         for line in lines:
-            polyline = folium.PolyLine(locations=line, color=color)
-            polyline.add_child(folium.Tooltip(f'{distance} (Migration Distance)'))
-            polyline.add_to(m)
+            # draw ant paths which show the migration routes
+            ant_path = AntPath(locations=line, color='green', reverse='true', dash_array=[10, 20], delay=800)
+            ant_path.add_child(folium.Tooltip(f'{distance} (Migration Distance)'))
+            ant_path.add_to(m)
     
     return m
 

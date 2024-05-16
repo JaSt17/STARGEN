@@ -146,6 +146,34 @@ def get_time_bin_hexagons(df):
 
 # function that gets isolated hexagons and barriers for each time bin
 def get_isolated_hex_and_barriers(time_bin, hexagons, threshold, allowed_distance=12):
+    
+    def find_h3_line(hex_start, hex_end, max_iterations=10):
+        """Finds an H3 line between two hexagons, potentially using midpoints if necessary."""
+        try:
+            # Try to create a direct line first
+            return h3.h3_line(hex_start, hex_end)
+        except:
+            if max_iterations <= 0:
+                return None  # Failed to find a line after maximum iterations
+            
+            # Calculate the midpoint between the centers of the two hexagons
+            center_start = h3.h3_to_geo(hex_start)
+            center_end = h3.h3_to_geo(hex_end)
+            midpoint = [(center_start[0] + center_end[0]) / 2, (center_start[1] + center_end[1]) / 2]
+            
+            # Convert midpoint to the nearest H3 hexagon
+            midpoint_hex = h3.geo_to_h3(midpoint[0], midpoint[1], h3.h3_get_resolution(hex_start))
+            
+            # Recursively attempt to find lines using the midpoint
+            first_half = find_h3_line(hex_start, midpoint_hex, max_iterations - 1)
+            second_half = find_h3_line(midpoint_hex, hex_end, max_iterations - 1)
+            
+            if first_half is not None and second_half is not None:
+                # Combine the two halves, removing the duplicate midpoint hex
+                return first_half[:-1] + second_half
+            else:
+                return None
+
     # directory to save the barrier lines and hexagons with their distances
     barrier_hex = defaultdict(list)
     barrier_lines = defaultdict(float)
@@ -168,19 +196,18 @@ def get_isolated_hex_and_barriers(time_bin, hexagons, threshold, allowed_distanc
             hex_dist_to_direct_neighbors[pair[1]].append(distance)
         # if the hexagons are further appart
         else:
-            # try to draw a line between the two hexagons
-            try:
-                # if found a line, get the hexagons in the line
-                line = h3.h3_line(pair[0], pair[1])[1:-1]
-                # only add distances if the line is shorter than the allowed distance
+            # get the line between the two hexagons using the find_h3_line function
+            line = find_h3_line(pair[0], pair[1])
+            if line is not None:
+                # check if the line is shorter than the allowed distance
                 if len(line) <= allowed_distance:
                     for hex in line:
+                        # if the hexagon is already in the dictionary, append the distance
                         if hex in barrier_hex:
                             barrier_hex[hex].append(distance)
+                        # if not, add the hexagon and the distance
                         else:
                             barrier_hex[hex] = [distance]
-            except:
-                continue
 
     # Calculate the average distance for each hexagon and round it to 2 decimal places
     barrier_hex = {hex: round((sum(distances)/len(distances)), 2) for hex, distances in barrier_hex.items()}
@@ -244,7 +271,9 @@ def find_closest_population(df, time_bin, isolated_hex, dist_matrix, threshold):
         
         # Add the closest hexagon if found
         if closest_hex is not None:
-            pair = frozenset([iso, closest_hex])
+            # Create a tuple with iso as the first element
+            pair = (iso, closest_hex)
+            # Add the pair to the dictionary with the distance
             closest_populations[pair] = round(min_dist, 2)
         else:
             new_isolated_hex.append(iso)
@@ -252,6 +281,7 @@ def find_closest_population(df, time_bin, isolated_hex, dist_matrix, threshold):
     return closest_populations, new_isolated_hex
 
 
+# function that imputes missing hexagons using Kriging interpolation with a spherical variogram model
 def impute_missing_hexagons(barrier_hex, num_runs=5):
     # Functions that are needed within the function:
     # Function to convert hexagon indices to lat/lon coordinates
@@ -268,7 +298,7 @@ def impute_missing_hexagons(barrier_hex, num_runs=5):
         lons = known_coords[:, 1]
 
         # Create OrdinaryKriging object
-        OK = OrdinaryKriging(lons, lats, known_values, variogram_model='linear', verbose=False, enable_plotting=False)
+        OK = OrdinaryKriging(lons, lats, known_values, variogram_model='spherical', verbose=False, enable_plotting=False)
 
         # Interpolate unknown points
         unknown_coords = np.array([hex_to_latlon(h) for h in unknown_points])
