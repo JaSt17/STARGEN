@@ -64,6 +64,11 @@ def calc_neighbor_dist(hexagons, dist_matrix, time_bin_df, hex_col):
     
     # get the neighbors for whom we will calculate the distances
     neighbors = get_neighbors(hexagons)
+    
+    # add hexagons that are not yet in the neighbors dictionary with an empty list
+    for hexagon in hexagons:
+        if hexagon not in neighbors:
+            neighbors[hexagon] = []
                 
     # calculate the average distance between the hexagon and its neighbors
     for hexagon in neighbors.keys():
@@ -291,6 +296,44 @@ def find_closest_population(df, time_bin, isolated_hex, dist_matrix, threshold):
             new_isolated_hex.append(iso)
     
     return closest_populations, new_isolated_hex
+
+
+def impute_missing_hexagons_multiple_runs(barrier_hex, hexagons, num_runs=5):
+    # impute the missing hexagons in the barrier_hex
+    def impute_missing_hexagons(barrier_hex):
+        # convert the barrier_hex to sets for faster lookup
+        barrier_hex_set = set(barrier_hex)
+        # create a dictionary to store
+        new_barrier_hex = defaultdict(list)
+        # loop through all the barrier hexagons
+        for hexagon in barrier_hex:
+            # check if the neighbors are not in the barrier_hex
+            neighbors = [hex for hex in h3.k_ring(hexagon, 1) if hex not in barrier_hex_set]
+            # loop over all remaining neighbors
+            for neighbor in neighbors:
+                if neighbor in new_barrier_hex:
+                    new_barrier_hex[neighbor].append(barrier_hex[hexagon])
+                else:
+                    new_barrier_hex[neighbor] = [barrier_hex[hexagon]]
+        output_hex = defaultdict(float)
+        # delete the hexagons that have less than 3 neighbors
+        for hexagon, distances in new_barrier_hex.items():
+            if len(distances) < 3:
+                continue
+            else:
+                output_hex[hexagon] = round(sum(distances)/len(distances), 2)
+        return output_hex
+
+    # create a copy of the barrier_hex
+    imputed_hex = barrier_hex.copy()
+    # loop through the number of runs
+    for _ in range(num_runs):
+        imputed_hex.update(impute_missing_hexagons(imputed_hex))
+        
+    # delete the hexagons that are already in the barrier_hex
+    imputed_hex = {hex: dist for hex, dist in imputed_hex.items() if hex not in barrier_hex}
+
+    return imputed_hex
 
 
 # function that imputes missing hexagons using Kriging interpolation with a spherical variogram model

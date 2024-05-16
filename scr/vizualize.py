@@ -75,11 +75,10 @@ def draw_hexagons(hexagons, m=None, color='darkgreen', zoom_start=1, value=None,
                 fill_opacity=opacity,
                 fill=True
             )
-            if value >= 0:
-                if imputed:
-                    polygon.add_child(folium.Tooltip(f"{value} (Imputed)"))
-                else:
-                    polygon.add_child(folium.Tooltip(value))
+            if imputed:
+                polygon.add_child(folium.Tooltip(f"{value} (Imputed)"))
+            else:
+                polygon.add_child(folium.Tooltip(value))
             
             polygon.add_to(m)
     return m
@@ -155,19 +154,22 @@ def draw_migration_for_time_bin(time_bin, m, color="green"):
 def get_color_gradient():
     # Define the colors for the colormap
     colors = [
-        (0.95, 0.87, 0.55),  # Sand color yellow
-        (0.92, 0.78, 0.48),  # Intermediate yellow-brown
-        (0.87, 0.69, 0.38),  # Yellow-brown tone
-        (0.78, 0.62, 0.34),  # Intermediate brown
-        (0.66, 0.72, 0.73),  # Light blue-gray
-        (0.57, 0.76, 0.85),  # Intermediate light blue
-        (0.48, 0.82, 0.95),  # Light blue
-        (0.42, 0.76, 0.91),  # Intermediate turquoise
-        (0.36, 0.70, 0.95)   # Turquoise blue
+        (0.0, 0.95, 0.87, 0.55),  # 0.0: Sand color yellow
+        (0.2, 0.92, 0.78, 0.48),  # 0.2: Intermediate yellow-brown
+        (0.4, 0.87, 0.69, 0.38),  # 0.4: Yellow-brown tone
+        (0.5, 0.78, 0.62, 0.34),  # 0.5: Darker brown
+        (0.55, 0.66, 0.72, 0.73),  # 0.55: Light blue-gray
+        (0.6, 0.57, 0.76, 0.85),  # 0.6: Intermediate light blue
+        (0.75, 0.48, 0.82, 0.95),  # 0.75: Light blue
+        (0.9, 0.42, 0.76, 0.91),  # 0.9: Intermediate turquoise
+        (1.0, 0.36, 0.70, 0.95)   # 1.0: Turquoise blue
     ]
 
+    # Normalize colors to be between 0 and 1
+    normalized_colors = [(value, (r, g, b)) for value, r, g, b in colors]
+    
     # Create the colormap
-    cmap = mcolors.LinearSegmentedColormap.from_list("costum_color_gradient", colors)
+    cmap = mcolors.LinearSegmentedColormap.from_list("custom_color_gradient", normalized_colors, N=256)
     
     return cmap
 
@@ -190,7 +192,7 @@ def add_legend(m):
     </ul>
     </div>
     <div class='legend-gradient'>
-        <span style="font-weight: bold;">Genetic Distances</span>
+        <span style="font-weight: bold;">Scaled Genetic Distances</span>
         <span style='background: linear-gradient(to right, 
             rgb(242, 222, 140),  /* Sand color yellow */
             rgb(235, 199, 123),  /* Intermediate yellow-brown */
@@ -205,7 +207,7 @@ def add_legend(m):
  width: 100%; height: 10px; display: block;'></span>
         <div style='display: flex; justify-content: space-between;'>
             <span>0</span>
-            <span>1</span>
+            <span>1+</span>
         </div>
     </div>
     </div> 

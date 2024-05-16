@@ -121,7 +121,7 @@ if 'setup_done' in st.session_state and st.session_state['setup_done']:
         # get the isolated hexagons and barriers for the selected time bin
         st.session_state['isolated_hex'], st.session_state['barrier_lines'], st.session_state['barrier_hex'] = get_isolated_hex_and_barriers(time_bin, hexagons, st.session_state['isolated_threshold'], st.session_state['resolution']**2+3)
         # get imputed hexagons
-        st.session_state['imputed_hex'] = impute_missing_hexagons(st.session_state['barrier_hex'], num_runs=st.session_state['resolution']*2)
+        st.session_state['imputed_hex'] = impute_missing_hexagons_multiple_runs(st.session_state['barrier_hex'], hexagons, num_runs=st.session_state['resolution']*2)
         # change the threshold for isolated populations
         st.session_state['isolated_threshold'] = new_isolated_threshold
         # change the selected time bin id
