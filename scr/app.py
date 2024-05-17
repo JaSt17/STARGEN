@@ -36,13 +36,13 @@ if 'setup_done' not in st.session_state:
         st.title('GeoGenTrack')
     
     # Slider to choose the number of time bins and button to get information about it
-    st.session_state['time_bins'] = st.slider('Select a number of time bins', 1, 25, 11, 1)
+    st.session_state['time_bins'] = st.slider('Select a number of time bins', 1, 30, 14, 1)
     # Checkbox to enable same time bin length
     st.session_state['same_age_range'] = st.checkbox('Same age range for each time bin', value=True)
 
     # show the user the current time span for each time bin give the number of time bins
     if st.session_state['same_age_range']:
-        st.write(f"Current time span for each time bin is {round((11000)/st.session_state['time_bins'])} years.")
+        st.write(f"Current time span for each time bin is about {round((14000)/10/st.session_state['time_bins'])*10} years.")
         
     # button to get information about time bins
     if st.button("Information about time bins"):
@@ -87,8 +87,6 @@ if 'setup_done' in st.session_state and st.session_state['setup_done']:
     
     # rename the time bins to display them in the dropdown
     time_bins = rename_time_bins(st.session_state['df'])
-    # get the hexagons for each time bin
-    time_bins_hexagons = get_time_bin_hexagons(st.session_state['df'])
 
     # dropdown to select time bins
     selected_time_bin = st.selectbox("Time Bin", options=time_bins)
@@ -100,38 +98,39 @@ if 'setup_done' in st.session_state and st.session_state['setup_done']:
     time_bin = st.session_state['time_bins_dist'][selected_time_bin]
     # get the hexagons and its internal distances for the selected time bin
     time_bin, hexagons = get_hexagons(time_bin)
-    # normalize the distances for each timebin
-    time_bin = scale_distances(time_bin)
+    # scale the distances to their geographical distance and get the predicted distances
+    time_bin, gen_distances_pred= scale_distances(time_bin)
     
     # initialize the threshold for the distance values to display and the threshold for isolated populations
     if 'threshold' not in st.session_state:
         st.session_state['threshold'] = 0.0
-        st.session_state['isolated_threshold'] = 0.4
+        st.session_state['isolated_threshold'] = 1.5
         
     # Slider to choose the threshold for the distant values which should be displayed
     st.session_state['threshold'] = st.sidebar.slider('Which distances should be displayed ?:',
-                                                        0.0, 1.0, st.session_state['threshold'], 0.01)
+                                                        0.0, 3.0, st.session_state['threshold'], 0.01)
     
     # Slider to chose the threshold for isolated populations
     new_isolated_threshold = st.sidebar.slider('Which distances are considered as isolated populations ?:',
-                                                0.0, 1.0, st.session_state['isolated_threshold'], 0.01)
+                                                0.0, 3.0, st.session_state['isolated_threshold'], 0.01)
     
     # check if the threshold or the selected time bin has changed
     if new_isolated_threshold != st.session_state['isolated_threshold'] or new_selected_time_bin_id != st.session_state['selected_time_bin_id']:
         # get the isolated hexagons and barriers for the selected time bin
-        st.session_state['isolated_hex'], st.session_state['barrier_lines'], st.session_state['barrier_hex'] = get_isolated_hex_and_barriers(time_bin, hexagons, st.session_state['isolated_threshold'], st.session_state['resolution']**2+3)
+        st.session_state['isolated_hex'], st.session_state['barrier_lines'], st.session_state['barrier_hex'] = get_isolated_hex_and_barriers(time_bin, hexagons, st.session_state['isolated_threshold'], st.session_state['resolution']*6)
         # get imputed hexagons
-        st.session_state['imputed_hex'] = impute_missing_hexagons_multiple_runs(st.session_state['barrier_hex'], hexagons, num_runs=st.session_state['resolution']*2)
+        st.session_state['imputed_hex'] = impute_missing_hexagons(st.session_state['barrier_hex'], num_runs=st.session_state['resolution']*2)
         # change the threshold for isolated populations
         st.session_state['isolated_threshold'] = new_isolated_threshold
-        # change the selected time bin id
+        # change the selected time bin id   
         st.session_state['selected_time_bin_id'] = new_selected_time_bin_id
         # find the closest populations for the isolated hexagons
         st.session_state['closest_populations'], st.session_state['isolated_hex'] = find_closest_population(st.session_state['df'],
                                                                                                             st.session_state['selected_time_bin_id'],
                                                                                                             st.session_state['isolated_hex'],
                                                                                                             st.session_state['matrix'],
-                                                                                                            st.session_state['isolated_threshold'])
+                                                                                                            st.session_state['isolated_threshold'],
+                                                                                                            gen_distances_pred)
     
     if st.sidebar.checkbox("Show possible migration routes & isolated populations", False):
         st.session_state['show_migration'] = True
@@ -156,7 +155,7 @@ if 'setup_done' in st.session_state and st.session_state['setup_done']:
     # text input where the user can enter the longitude between -180 and 180
     st.session_state['map_state']['lon'] = st.sidebar.number_input('Enter longitude:', -180.0, 180.0, step=0.01, value=st.session_state['map_state']['lon'])
     # slider to choose the zoom level of the map
-    st.session_state['map_state']['zoom'] = st.sidebar.slider('Choose zoom level:', 1, 15, st.session_state['map_state']['zoom'])
+    st.session_state['map_state']['zoom'] = st.sidebar.slider('Choose zoom level:', 1, 10, st.session_state['map_state']['zoom'])
         
     # get the specifyed map state
     lat, lon, zoom = st.session_state['map_state'].values()

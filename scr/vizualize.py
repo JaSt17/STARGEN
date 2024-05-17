@@ -1,46 +1,70 @@
 from h3 import h3
 import folium
 from folium import Map, Element
-from func import normalize_distances
 from branca.element import Template, MacroElement
 import matplotlib.colors as mcolors
 import base64
 from folium.plugins import AntPath
 
 
-# function that splits a hexagon if it crosses the antimeridian
 def split_hexagon_if_needed(hexagon):
+    """
+    Splits a hexagon if it crosses the antimeridian.
+
+    A hexagon crosses the antimeridian if the difference between its maximum 
+    and minimum longitudes is greater than 180 degrees. This function checks 
+    for such a condition and splits the hexagon into two parts if necessary.
+
+    Parameters:
+        hexagon (str): The H3 index of the hexagon to be checked and potentially split.
+
+    Returns:
+        list: A list containing one or two tuples of coordinates. If the hexagon 
+                does not cross the antimeridian, the list contains one tuple of 
+                coordinates. If it does cross the antimeridian, the list contains 
+                two tuples of coordinates representing the split hexagon.
+    """
     boundary = h3.h3_to_geo_boundary(hexagon, geo_json=False)
-    longitudes = [lon for lat, lon in boundary]
+    longitudes = [lon for _, lon in boundary]
 
     # Check if the hexagon crosses the antimeridian
     if max(longitudes) - min(longitudes) > 180:
-        boundary = list(boundary)
-        first_hex = list()
-        second_hex = list()
-        # make get two hexagons from the original one
-        for i in range(len(boundary)):
-            if boundary[i][1] <= 0:
-                first_hex.append((boundary[i][0], boundary[i][1] + 360))
-                second_hex.append((boundary[i][0], boundary[i][1]))
-            if boundary[i][1] > 0:
-                first_hex.append((boundary[i][0], boundary[i][1]))
-                second_hex.append((boundary[i][0], boundary[i][1] - 360))
-        # return two tuples of coordinates of the two hexagons
+        first_hex = []
+        second_hex = []
+
+        # Create two hexagons from the original one
+        for lat, lon in boundary:
+            if lon <= 0:
+                first_hex.append((lat, lon + 360))
+                second_hex.append((lat, lon))
+            else:
+                first_hex.append((lat, lon))
+                second_hex.append((lat, lon - 360))
+
         return [tuple(first_hex), tuple(second_hex)]
     else:
-        # return the original hexagon
-        return [boundary]
-    
-# function that empty hexagons on a map with only the boarders for the hexagons which hold sampels
+        return [tuple(boundary)]
+
+
 def draw_sample_hexagons(hex_dict, m=None, color='grey', zoom_start=1):
-    # Create a map if it is not provided
+    """
+    Draws hexagons on a map, displaying only the borders for hexagons that contain samples.
+
+    Parameters:
+        hex_dict (dict): A dictionary where keys are hexagon H3 indices and 
+                            values are internal average sample distances.
+        m (folium.Map, optional): An existing Folium map object to plot on. 
+                                    If None, a new map is created. Defaults to None.
+        color (str, optional): The color of the hexagon borders. Defaults to 'grey'.
+        zoom_start (int, optional): The initial zoom level of the map. Defaults to 1.
+
+    Returns:
+        folium.Map: The map object with the plotted hexagons.
+    """
     if m is None:
         m = folium.Map(location=(0.0, 0.0), tiles="Esri worldstreetmap", zoom_start=zoom_start)
 
-    # Plot hexagons
-    for hexagon in hex_dict.keys():
-        # split the hexagon if it crosses the antimeridian
+    for hexagon, sample_distance in hex_dict.items():
         parts = split_hexagon_if_needed(hexagon)
         for part in parts:
             polygon = folium.Polygon(
@@ -50,21 +74,33 @@ def draw_sample_hexagons(hex_dict, m=None, color='grey', zoom_start=1):
                 fill_opacity=0.0,
                 fill=True
             )
-            # add tooltip with internal hexagon distance
-            polygon.add_child(folium.Tooltip(f"Internal average sample distance: {hex_dict[hexagon]}"))
+            polygon.add_child(folium.Tooltip(f"Internal average sample distance: {sample_distance}"))
             polygon.add_to(m)
+
     return m
 
+def draw_hexagons(hexagons, m=None, color='white', zoom_start=1, value=None, opacity=0.5, imputed=False):
+    """
+    Draws hexagons on a map.
 
-# function that draws hexagons on a map
-def draw_hexagons(hexagons, m=None, color='darkgreen', zoom_start=1, value=None, opacity=0.5, imputed=False):
-    # Create a map if it is not provided
+    Parameters:
+        hexagons (list): A list of hexagon H3 indices to be plotted.
+        m (folium.Map, optional): An existing Folium map object to plot on. 
+                                If None, a new map is created. Defaults to None.
+        color (str, optional): The fill color of the hexagons. Defaults to 'white'.
+        zoom_start (int, optional): The initial zoom level of the map. Defaults to 1.
+        value (str, optional): The value to display in the tooltip. Defaults to None.
+        opacity (float, optional): The fill opacity of the hexagons. Defaults to 0.5.
+        imputed (bool, optional): Whether the value is imputed. Adds "(Imputed)" 
+                                to the tooltip if True. Defaults to False.
+
+    Returns:
+        folium.Map: The map object with the plotted hexagons.
+    """
     if m is None:
         m = folium.Map(location=(0.0, 0.0), tiles="Esri worldstreetmap", zoom_start=zoom_start)
 
-    # Plot hexagons
     for hexagon in hexagons:
-        # split the hexagon if it crosses the antimeridian
         parts = split_hexagon_if_needed(hexagon)
         for part in parts:
             polygon = folium.Polygon(
@@ -75,94 +111,149 @@ def draw_hexagons(hexagons, m=None, color='darkgreen', zoom_start=1, value=None,
                 fill_opacity=opacity,
                 fill=True
             )
-            if imputed:
-                polygon.add_child(folium.Tooltip(f"{value} (Imputed)"))
-            else:
-                polygon.add_child(folium.Tooltip(value))
-            
+            # add imputed to tooltip if imputed is True
+            tooltip_text = f"{value} (Imputed)" if imputed else str(value)
+            polygon.add_child(folium.Tooltip(tooltip_text))
             polygon.add_to(m)
+
     return m
 
+
 def draw_hexagons_with_values(hex_dict, m=None, zoom_start=1, threshold=0.0, imputed=False):
+    """
+    Draws hexagons on a map with values determining their fill color.
+
+    Parameters:
+        hex_dict (dict): A dictionary where keys are hexagon H3 indices and 
+                            values are the distance values that determining color and tooltip.
+        m (folium.Map, optional): An existing Folium map object to plot on. 
+                                    If None, a new map is created. Defaults to None.
+        zoom_start (int, optional): The initial zoom level of the map. Defaults to 1.
+        threshold (float, optional): The minimum value required to plot a hexagon. Defaults to 0.0.
+        imputed (bool, optional): Whether the values are imputed. Adds "(Imputed)" 
+                                    to the tooltip if True. Defaults to False.
+
+    Returns:
+        folium.Map: The map object with the plotted hexagons.
+    """
     hexagons = hex_dict.keys()
     values = hex_dict.values()
     
-    # get color gradient
     cmap = get_color_gradient()
 
-    # write the values to the center of each hexagon
     for hexagon, value in zip(hexagons, values):
         if value < threshold:
             continue
-        col = mcolors.to_hex(cmap(value))
-        m = draw_hexagons([hexagon], m, color=col, zoom_start=zoom_start, value=value, imputed=imputed)
+        color = mcolors.to_hex(cmap(value / 3))
+        m = draw_hexagons([hexagon], m, color=color, zoom_start=zoom_start, value=value, opacity=0.5, imputed=imputed)
+
     return m
 
 
 def draw_barriers(barriers_dict, m=None, zoom_start=1, threshold=0.0):
-    barriers = barriers_dict.keys()
-    values = barriers_dict.values()
-    
-    # get color gradient
+    """
+    Draws barriers on a map with colors based on their values.
+
+    Parameters:
+        barriers_dict (dict): A dictionary where keys are barrier coordinates 
+                                (list of tuples) and values are the distance values 
+                                for determining color and tooltip.
+        m (folium.Map, optional): An existing Folium map object to plot on. 
+                                    If None, a new map is created. Defaults to None.
+        zoom_start (int, optional): The initial zoom level of the map. Defaults to 1.
+        threshold (float, optional): The minimum value required to plot a barrier. Defaults to 0.0.
+
+    Returns:
+        folium.Map: The map object with the plotted barriers.
+    """
+    if m is None:
+        m = folium.Map(location=(0.0, 0.0), tiles="Esri worldstreetmap", zoom_start=zoom_start)
+
     cmap = get_color_gradient()
-    
-    for barrier, value in zip(barriers, values):
+
+    for barrier, value in barriers_dict.items():
         if value < threshold:
             continue
-        col = mcolors.to_hex(cmap(value))
-        barrier = list(barrier)
-        # try to draw the barrier
+        color = mcolors.to_hex(cmap(value / 3))
+        barrier_coords = list(barrier)
+
         try:
-            polyline = folium.PolyLine(barrier, color = col)
-            polyline.add_child(folium.Tooltip(value))
+            polyline = folium.PolyLine(barrier_coords, color=color)
+            polyline.add_child(folium.Tooltip(str(value)))
             polyline.add_to(m)
-        except:
-            pass
+        except Exception as e:
+            print(f"Error drawing barrier {barrier}: {e}")
+
     return m
 
-# this function takes a time bin and a map and draws all neighboring lines for the hexagons in that time bin
+
 def draw_migration_for_time_bin(time_bin, m, color="green"):
-    # Loop through all pairs of hexagons in the time bin
+    """
+    Draw migration paths for hexagon pairs within a specified time bin on a given map.
+    
+    Returns:
+    folium.Map: The map object with the migration paths added.
+    """
+    
+    def adjust_for_antimeridian(midpoint1, midpoint2):
+        """Adjusts midpoints for the antimeridian crossing."""
+        if midpoint1[1] < midpoint2[1]:
+            midpoint1_adj = (midpoint1[0], midpoint1[1] + 360)
+            midpoint2_adj = (midpoint2[0], midpoint2[1] - 360)
+        else:
+            midpoint1_adj = (midpoint1[0], midpoint1[1] - 360)
+            midpoint2_adj = (midpoint2[0], midpoint2[1] + 360)
+        return [[midpoint1_adj, midpoint2], [midpoint1, midpoint2_adj]]
+    
     for pair, distance in time_bin.items():
         hex1, hex2 = pair
-        
-        # Get the midpoints of both hexagons
         midpoint1 = h3.h3_to_geo(hex1)
         midpoint2 = h3.h3_to_geo(hex2)
-        
-        # Check if the points are on opposite sides of the antimeridian
+
         if abs(midpoint1[1] - midpoint2[1]) > 180:
-            if midpoint1[1] < midpoint2[1]:
-                midpoint1_adj = (midpoint1[0], midpoint1[1] + 360)
-                midpoint2_adj = (midpoint2[0], midpoint2[1] - 360)
-            else:
-                midpoint1_adj = (midpoint1[0], midpoint1[1] - 360)
-                midpoint2_adj = (midpoint2[0], midpoint2[1] + 360)
-            lines = [[midpoint1_adj, midpoint2], [midpoint1, midpoint2_adj]]
+            lines = adjust_for_antimeridian(midpoint1, midpoint2)
         else:
             lines = [[midpoint1, midpoint2]]
         
-        # Loop over all lines and draw them on the map
         for line in lines:
-            # draw ant paths which show the migration routes
-            ant_path = AntPath(locations=line, color='green', reverse='true', dash_array=[10, 20], delay=800)
+            ant_path = AntPath(
+                locations=line, 
+                color=color, 
+                reverse=True, 
+                dash_array=[10, 20], 
+                delay=800
+            )
             ant_path.add_child(folium.Tooltip(f'{distance} (Migration Distance)'))
             ant_path.add_to(m)
     
     return m
 
+
 def get_color_gradient():
+    """
+    Create a custom colormap with a gradient of colors ranging from sand yellow to turquoise blue.
+
+    The colormap is designed with specific color transitions at defined points.
+
+    Returns:
+    cmap : LinearSegmentedColormap
+        A matplotlib colormap object with the specified color gradient.
+    """
+    
     # Define the colors for the colormap
     colors = [
-        (0.0, 0.95, 0.87, 0.55),  # 0.0: Sand color yellow
-        (0.2, 0.92, 0.78, 0.48),  # 0.2: Intermediate yellow-brown
-        (0.4, 0.87, 0.69, 0.38),  # 0.4: Yellow-brown tone
-        (0.5, 0.78, 0.62, 0.34),  # 0.5: Darker brown
-        (0.55, 0.66, 0.72, 0.73),  # 0.55: Light blue-gray
-        (0.6, 0.57, 0.76, 0.85),  # 0.6: Intermediate light blue
-        (0.75, 0.48, 0.82, 0.95),  # 0.75: Light blue
-        (0.9, 0.42, 0.76, 0.91),  # 0.9: Intermediate turquoise
-        (1.0, 0.36, 0.70, 0.95)   # 1.0: Turquoise blue
+        (0.0, 0.95, 0.87, 0.55),  # Sand color yellow
+        (0.12, 0.92, 0.78, 0.48),  # Intermediate yellow-brown
+        (0.24, 0.87, 0.69, 0.38),  # Yellow-brown tone
+        (0.36, 0.82, 0.65, 0.36),  # Slightly darker brown
+        (0.465, 0.78, 0.62, 0.34),  # Darker brown
+        (0.466, 0.75, 0.68, 0.50),  # Transition color - intermediate brown to light blue-gray
+        (0.467, 0.66, 0.72, 0.73),  # Light blue-gray
+        (0.55, 0.63, 0.74, 0.78),  # Slightly darker blue-gray
+        (0.6, 0.57, 0.76, 0.85),  # Intermediate light blue
+        (0.75, 0.48, 0.82, 0.95),  # Light blue
+        (0.9, 0.42, 0.76, 0.91),  # Intermediate turquoise
+        (1.0, 0.36, 0.70, 0.95)   # Turquoise blue
     ]
 
     # Normalize colors to be between 0 and 1
@@ -173,8 +264,21 @@ def get_color_gradient():
     
     return cmap
 
+
 def add_legend(m):
-    # Create the legend template as an HTML element
+    """
+    Adds a draggable legend to the provided folium map.
+
+    The legend includes:
+    - Symbols representing different types of areas and routes.
+    - A color gradient representing scaled genetic distances.
+
+    Parameters:
+    m (folium.Map, optional): An existing Folium map object to plot on. 
+
+    Returns:
+    m : The map object with the legend added.
+    """
     template = """
     {% macro html(this, kwargs) %}
     <div id='maplegend' class='maplegend' 
@@ -194,20 +298,24 @@ def add_legend(m):
     <div class='legend-gradient'>
         <span style="font-weight: bold;">Scaled Genetic Distances</span>
         <span style='background: linear-gradient(to right, 
-            rgb(242, 222, 140),  /* Sand color yellow */
-            rgb(235, 199, 123),  /* Intermediate yellow-brown */
-            rgb(222, 176, 97),   /* Yellow-brown tone */
-            rgb(199, 159, 86),   /* Intermediate brown */
-            rgb(169, 184, 186),  /* Light blue-gray */
-            rgb(145, 194, 218),  /* Intermediate light blue */
-            rgb(123, 209, 242),  /* Light blue */
-            rgb(107, 194, 232),  /* Intermediate turquoise */
-            rgb(92, 178, 242)    /* Turquoise blue */
+            rgb(242, 222, 140) 0%,       /* Sand color yellow */
+            rgb(235, 199, 123) 20%,      /* Intermediate yellow-brown */
+            rgb(222, 176, 97) 40%,       /* Yellow-brown tone */
+            rgb(209, 165, 92) 45%,       /* Slightly darker brown */
+            rgb(199, 159, 86) 49.5%,       /* Darker brown */
+            rgb(191, 173, 128) 50%,    /* Transition color - intermediate brown to light blue-gray */
+            rgb(169, 184, 186) 51%,      /* Light blue-gray */
+            rgb(160, 189, 199) 55%,      /* Slightly darker blue-gray */
+            rgb(145, 194, 218) 60%,      /* Intermediate light blue */
+            rgb(123, 209, 242) 75%,      /* Light blue */
+            rgb(107, 194, 232) 90%,      /* Intermediate turquoise */
+            rgb(92, 178, 242) 100%       /* Turquoise blue */
         );
- width: 100%; height: 10px; display: block;'></span>
+        width: 100%; height: 10px; display: block;'></span>
         <div style='display: flex; justify-content: space-between;'>
             <span>0</span>
-            <span>1+</span>
+            <span>1.5</span>
+            <span>3</span>
         </div>
     </div>
     </div> 
