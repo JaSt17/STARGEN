@@ -2,191 +2,194 @@ import streamlit as st
 import folium
 from streamlit_folium import folium_static
 import pandas as pd
-import pickle
 import os
 from label_samples_time_hexa import label_samples
 from vizualize import *
 from func import *
 
-# Function to clear session state
 def clear_state():
+    """
+    Clear all keys from the Streamlit session state.
+    """
     for key in list(st.session_state.keys()):
         del st.session_state[key]
-            
-# Function to get resolution data as table to display it for the user
+        
+
 def get_resolution_data():
+    """
+    Create and return a DataFrame containing resolution data for display.
+    
+    Returns:
+        pd.DataFrame: DataFrame with resolution information.
+    """
     data = {
-    "Resolution": [0, 1, 2, 3, 4, 5],
-    "Total number of cells": [122, 842, 5882, 41162, 288122, 2016842],
-    "Average cell area (km2)": [4357449.41, 609788.44, 86801.78, 12393.43, 1770.34, 252.90],
-    "Average edge length (Km)":  [1281.256011, 483.0568391, 182.5129565, 68.97922179, 26.07175968, 9.854090990]
+        "Resolution": [0, 1, 2, 3, 4, 5],
+        "Total number of cells": [122, 842, 5882, 41162, 288122, 2016842],
+        "Average cell area (km2)": [4357449.41, 609788.44, 86801.78, 12393.43, 1770.34, 252.90],
+        "Average edge length (Km)": [1281.256011, 483.0568391, 182.5129565, 68.97922179, 26.07175968, 9.854090990]
     }
-    # Convert the dictionary to a pandas DataFrame
     df = pd.DataFrame(data)
     return df
 
-# Initial screen to select time bins and resolution
-if 'setup_done' not in st.session_state:
+
+def initialize_session():
+    """
+    Initialize the session state and display the initial setup UI.
+    """
     st.set_page_config(page_title="GeoGeneTrack", page_icon=":earth_americas:")
-    # display the logo and title
+    
+    # Display the logo and title
     col1, col2 = st.columns([1, 2])
     with col2:
-        st.image("img/GeoGenTrack_logo.png", width=100) 
+        st.image("img/GeoGenTrack_logo.png", width=100)
     with col1:
         st.title('GeoGenTrack')
-    
-    # Slider to choose the number of time bins and button to get information about it
+
+    # Slider for selecting the number of time bins
     st.session_state['time_bins'] = st.slider('Select a number of time bins', 1, 30, 14, 1)
     # Checkbox to enable same time bin length
     st.session_state['same_age_range'] = st.checkbox('Same age range for each time bin', value=True)
 
-    # show the user the current time span for each time bin give the number of time bins
+    # Display the current time span for each time bin
     if st.session_state['same_age_range']:
         st.write(f"Current time span for each time bin is about {round((14000)/10/st.session_state['time_bins'])*10} years.")
-        
-    # button to get information about time bins
+
+    # Button to display information about time bins
     if st.button("Information about time bins"):
-            st.write("""
-    The ancient samples' dates range from 1890 AD to 108500 BC.
-    The data will get organized into time bins, which hold the same number of samples per time bin.
-    The samples can also be arrange so every time bin has the same range of years by checking the checkbox above.
+        st.write("""
+        The ancient samples' dates range from 1890 AD to 108500 BC.
+        The data will get organized into time bins, which hold the same number of samples per time bin.
+        The samples can also be arranged so every time bin has the same range of years by checking the checkbox above.
+        In that case the last timebin will be longer than the others to include all samples.
         """)
-    
-    # Slider to choose the resolution and button to get information about it
+
+    # Slider for selecting the resolution
     st.session_state['resolution'] = st.slider('Select a resolution', 1, 4, 3, 1)
-    
-    # button to get information about resolution
+
+    # Button to display information about resolution
     if st.button("Information about resolution"):
         st.table(get_resolution_data())
 
     # Button to run the tool
     if st.button('Run'):
         st.text('Running GeoGeneTrack...')
-        # Save the selected parameters to the session state
         st.session_state['setup_done'] = True
-        # read the distance matrix from the file
-        # get path to the distance matrix
-        path_to_matrix = os.getcwd()+"/1_dist_matrix/eucl_dist.pkl"
-        # load the distance matrix to the session state
+        # Load the distance matrix to the session state
+        path_to_matrix = os.getcwd() + "/1_dist_matrix/eucl_dist.pkl"
         st.session_state['matrix'] = pd.read_pickle(path_to_matrix)
         st.rerun()
         
-# Once setup is done, show the map and time bin selection 
-if 'setup_done' in st.session_state and st.session_state['setup_done']:
+
+def setup_done_ui():
+    """
+    Display the main UI after the setup is done.
+    """
     # Return to Home button
     if st.button('Return to Home', key='home'):
         clear_state()
         st.rerun()
-    
+
+    # Label the samples and save them in a DataFrame
     if 'df' not in st.session_state:
-        # lable the samples with hexagon id and time bin and save it in a dataframe
-        st.session_state['df'] = label_samples(os.getcwd(),st.session_state['time_bins'],st.session_state['resolution'], st.session_state['same_age_range'])
+        st.session_state['df'] = label_samples(os.getcwd(), st.session_state['time_bins'], st.session_state['resolution'], st.session_state['same_age_range'])
+    
+    # Calculate the average distances between neighboring hexagons for each time bin
     if 'time_bins_dist' not in st.session_state:
-        # calculate the average distances between neighboring hexagons for each time bin with the given parameters
         st.session_state['time_bins_dist'] = calc_dist_time_bin(st.session_state['df'], st.session_state['matrix'])
     
-    # rename the time bins to display them in the dropdown
+    # Rename the time bins to display them in the dropdown
     time_bins = rename_time_bins(st.session_state['df'])
-
-    # dropdown to select time bins
     selected_time_bin = st.selectbox("Time Bin", options=time_bins)
+
     if 'selected_time_bin_id' not in st.session_state:
         st.session_state['selected_time_bin_id'] = 1
-    new_selected_time_bin_id = time_bins.index(selected_time_bin)
-
-    # get the distance values for the selected time bin
-    time_bin = st.session_state['time_bins_dist'][selected_time_bin]
-    # get the hexagons and its internal distances for the selected time bin
-    time_bin, hexagons = get_hexagons(time_bin)
-    # scale the distances to their geographical distance and get the predicted distances
-    time_bin, gen_distances_pred= scale_distances(time_bin)
     
-    # initialize the threshold for the distance values to display and the threshold for isolated populations
+    # get the id of the selected time bin
+    new_selected_time_bin_id = time_bins.index(selected_time_bin)
+    # get the time bin and the hexagons for the selected time bin
+    time_bin = st.session_state['time_bins_dist'][selected_time_bin]
+    # get the hexagons with there internal distance and the distance values for the selected time bin
+    time_bin, hexagons = get_hexagons(time_bin)
+    # scale the distances to their geographical distance and save the predicted distances to scale the internal distances with it
+    time_bin, gen_distances_pred = scale_distances(time_bin)
+
+    # Initialize thresholds for distance values and isolated populations
     if 'threshold' not in st.session_state:
         st.session_state['threshold'] = 0.0
         st.session_state['isolated_threshold'] = 1.5
-        
-    # Slider to choose the threshold for the distant values which should be displayed
-    st.session_state['threshold'] = st.sidebar.slider('Which distances should be displayed ?:',
-                                                        0.0, 3.0, st.session_state['threshold'], 0.01)
+
+    # Slider to choose the threshold for the distance values to display
+    st.session_state['threshold'] = st.sidebar.slider('Which distances should be displayed?', 0.0, 3.0, st.session_state['threshold'], 0.01)
     
-    # Slider to chose the threshold for isolated populations
-    new_isolated_threshold = st.sidebar.slider('Which distances are considered as isolated populations ?:',
-                                                0.0, 3.0, st.session_state['isolated_threshold'], 0.01)
-    
-    # check if the threshold or the selected time bin has changed
+    # Slider to choose the threshold for isolated populations
+    new_isolated_threshold = st.sidebar.slider('Which distances are considered as isolated populations?', 0.0, 3.0, st.session_state['isolated_threshold'], 0.01)
+
+    # Check if the threshold or the selected time bin has changed
     if new_isolated_threshold != st.session_state['isolated_threshold'] or new_selected_time_bin_id != st.session_state['selected_time_bin_id']:
-        # get the isolated hexagons and barriers for the selected time bin
-        st.session_state['isolated_hex'], st.session_state['barrier_lines'], st.session_state['barrier_hex'] = get_isolated_hex_and_barriers(time_bin, hexagons, st.session_state['isolated_threshold'], st.session_state['resolution']*6)
-        # get imputed hexagons
-        st.session_state['imputed_hex'] = impute_missing_hexagons(st.session_state['barrier_hex'], num_runs=st.session_state['resolution']*2)
-        # change the threshold for isolated populations
+        # get the isolated hexagons and the barrier lines for the selected time bin
+        st.session_state['isolated_hex'], st.session_state['barrier_lines'], st.session_state['barrier_hex'] = get_isolated_hex_and_barriers(time_bin, hexagons, st.session_state['isolated_threshold'], st.session_state['resolution'] * 6)
+        # impute the missing hexagons until a range of 2 times the resolution is reached
+        st.session_state['imputed_hex'] = impute_missing_hexagons(st.session_state['barrier_hex'], num_runs=st.session_state['resolution'] * 2)
+        # save the new threshold for isolated populations
         st.session_state['isolated_threshold'] = new_isolated_threshold
-        # change the selected time bin id   
+        # save the new selected time bin id
         st.session_state['selected_time_bin_id'] = new_selected_time_bin_id
-        # find the closest populations for the isolated hexagons
-        st.session_state['closest_populations'], st.session_state['isolated_hex'] = find_closest_population(st.session_state['df'],
-                                                                                                            st.session_state['selected_time_bin_id'],
-                                                                                                            st.session_state['isolated_hex'],
-                                                                                                            st.session_state['matrix'],
-                                                                                                            st.session_state['isolated_threshold'],
-                                                                                                            gen_distances_pred)
-    
-    if st.sidebar.checkbox("Show possible migration routes & isolated populations", False):
-        st.session_state['show_migration'] = True
-    else:
-        st.session_state['show_migration'] = False
-        
-    if st.sidebar.checkbox("Show distance lines", False):
-        st.session_state['show_lines'] = True
-    else:
-        st.session_state['show_lines'] = False
-    
-    # set an initial map state if it does not exist
+        # find the closest populations to the isolated populations
+        st.session_state['closest_populations'], st.session_state['isolated_hex'] = find_closest_population(
+            st.session_state['df'], st.session_state['selected_time_bin_id'], st.session_state['isolated_hex'], 
+            st.session_state['matrix'], st.session_state['isolated_threshold'], gen_distances_pred
+        )
+
+    # Checkbox to toggle showing migration routes and isolated populations
+    st.session_state['show_migration'] = st.sidebar.checkbox("Show possible migration routes & isolated populations", False)
+    # Checkbox to toggle showing distance lines
+    st.session_state['show_lines'] = st.sidebar.checkbox("Show distance lines", False)
+
+    # Set initial map state if it does not exist
     if 'map_state' not in st.session_state:
-        st.session_state['map_state'] = {
-            "lat": 42.0,
-            "lon": 44.75,
-            "zoom": 1
-        }
+        st.session_state['map_state'] = {"lat": 42.0, "lon": 44.75, "zoom": 1}
+
     st.sidebar.write("Specify a default window for the map:")
-    # text input where the user can enter the latitude between -90 and 90
     st.session_state['map_state']['lat'] = st.sidebar.number_input('Enter latitude:', -90.0, 90.0, step=0.01, value=st.session_state['map_state']['lat'])
-    # text input where the user can enter the longitude between -180 and 180
     st.session_state['map_state']['lon'] = st.sidebar.number_input('Enter longitude:', -180.0, 180.0, step=0.01, value=st.session_state['map_state']['lon'])
-    # slider to choose the zoom level of the map
     st.session_state['map_state']['zoom'] = st.sidebar.slider('Choose zoom level:', 1, 10, st.session_state['map_state']['zoom'])
-        
-    # get the specifyed map state
+
     lat, lon, zoom = st.session_state['map_state'].values()
-    if not st.sidebar.checkbox("Black and White Map", False):
-        m = folium.Map(location=(lat, lon), tiles="Esri worldstreetmap", zoom_start=zoom)
-    else:
-        m = folium.Map(location=(lat, lon),  tiles="Cartodb Positron", zoom_start=zoom)
-    # check if the distance lines should be displayed and draw lines or distance hexagons
+    map_tiles = "Esri worldstreetmap" if not st.sidebar.checkbox("Black and White Map", False) else "Cartodb Positron"
+    m = folium.Map(location=(lat, lon), tiles=map_tiles, zoom_start=zoom)
+
+    # Draw lines or hexagons based on the selected options
     if st.session_state['show_lines']:
         m = draw_sample_hexagons(hexagons, m, zoom_start=zoom)
         lines = get_distance_lines(time_bin)
         m = draw_barriers(lines, m)
     else:
-        # draw the hexagons barriers and barrier lines between direct neighbors
-        m = draw_hexagons_with_values(st.session_state['barrier_hex'], m, threshold = st.session_state['threshold'])
-        # draw the imputed hexagons
-        m = draw_hexagons_with_values(st.session_state['imputed_hex'], m, threshold = st.session_state['threshold'], imputed=True)
-        # draw all hexagons for the selected time bin which hold the samples
+        m = draw_hexagons_with_values(st.session_state['barrier_hex'], m, threshold=st.session_state['threshold'])
+        m = draw_hexagons_with_values(st.session_state['imputed_hex'], m, threshold=st.session_state['threshold'], imputed=True)
         m = draw_sample_hexagons(hexagons, m, zoom_start=zoom)
-    # check if there are any barriers
+
+    # Draw barriers if there are any
     if len(st.session_state['barrier_lines']) > 0:
-        m = draw_barriers(st.session_state['barrier_lines'], m, threshold = st.session_state['threshold'])
-    # check if the migration routes should be displayed
+        m = draw_barriers(st.session_state['barrier_lines'], m, threshold=st.session_state['threshold'])
+
+    # Draw migration routes and isolated populations if selected
     if st.session_state['show_migration']:
-        # draw the migration lines for the isolated hexagons
         m = draw_migration_for_time_bin(st.session_state['closest_populations'], m)
-        # highlight the isolated hexagons in red that can not be explained by migration
-        m = draw_hexagons(st.session_state['isolated_hex'], m, color='red', zoom_start=zoom, opacity=0.7, value='Isolated Population without possible migration route.')
-    # add the legend to the map
-    m = add_legend(m)
+        m = draw_hexagons(st.session_state['isolated_hex'], m,)
         
-    # Display the map in Streamlit
+    m = add_legend(m)
     folium_static(m, width=800, height=600)
     st.write(f"Number of isolated populations with no migration route found: {len(st.session_state['isolated_hex'])}")
+    
+
+def main():
+    """
+    Main function to control the app's flow.
+    """
+    if 'setup_done' not in st.session_state:
+        initialize_session()
+    else:
+        setup_done_ui()
+
+if __name__ == "__main__":
+    main()
