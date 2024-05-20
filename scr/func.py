@@ -276,7 +276,7 @@ def get_isolated_hex_and_barriers(time_bin, hexagons, threshold, allowed_distanc
 
 
 
-def find_closest_population(df, time_bin_index, isolated_hex, dist_matrix, threshold, gen_distances_pred):
+def find_closest_population(df, time_bin_index, isolated_hex, dist_matrix, threshold, gen_distances_pred, resolution):
     """
     Find the closest population for each isolated hexagon.
 
@@ -346,7 +346,7 @@ def find_closest_population(df, time_bin_index, isolated_hex, dist_matrix, thres
         all_dist[frozenset([iso, closest_hex])] = round(distance, 2)
         
         # scale the distances by the estimated genetic differences
-        scaled_distances = scale_distances(all_dist, gen_distances_pred)[0]
+        scaled_distances = scale_distances(all_dist, gen_distances_pred, resolution)[0]
         
         if scaled_distances[frozenset([iso, closest_hex])] < threshold:
             pair = (iso, closest_hex)
@@ -408,7 +408,7 @@ def impute_missing_hexagons(barrier_hex, num_runs=5):
     return imputed_hex
 
 
-def scale_distances(time_bin, exsiting_pred=None):
+def scale_distances(time_bin, exsiting_pred=None, resolution=3):
     """
     Scales genetic distances by the estimated genetic differences modeled by a LOESS function of the geographic distances.
 
@@ -419,7 +419,7 @@ def scale_distances(time_bin, exsiting_pred=None):
     - output: A dictionary where keys are pairs of hexagons and values are scaled genetic distances.
     """
 
-    def get_km_distance(hex1, hex2):
+    def get_km_distance(hex1, hex2=None, resolution=3):
         """
         Calculates the geographic distance in kilometers between two hexagons.
 
@@ -430,6 +430,8 @@ def scale_distances(time_bin, exsiting_pred=None):
         Returns:
         - The distance in kilometers between the two hexagons.
         """
+        if hex2 is None:
+            return 1281/(2.65**resolution)
         coord1 = h3.h3_to_geo(hex1)
         coord2 = h3.h3_to_geo(hex2)
         return haversine(coord1, coord2)
@@ -444,7 +446,7 @@ def scale_distances(time_bin, exsiting_pred=None):
     if exsiting_pred is None:
         # Apply LOESS smoothing to the genetic distances based on geographic distances
         lowess = sm.nonparametric.lowess
-        gen_distances_pred = lowess(gen_distances, geo_distances, frac=1)
+        gen_distances_pred = lowess(gen_distances, geo_distances, frac=0.5)
     else:
         gen_distances_pred = exsiting_pred
 
@@ -457,7 +459,7 @@ def scale_distances(time_bin, exsiting_pred=None):
             km_distance = gen_distances_pred[:, 0][np.argmin(np.abs(gen_distances_pred[:, 0] - km_distance))]
         gen_distance = time_bin[pair]
         gen_distance_pred = gen_distances_pred[gen_distances_pred[:, 0] == km_distance][:, 1][0]
-        output[pair] = gen_distance / gen_distance_pred
+        output[pair] = round(gen_distance / gen_distance_pred,2)
 
     return output, gen_distances_pred
 

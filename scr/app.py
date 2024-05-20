@@ -23,10 +23,10 @@ def get_resolution_data():
         pd.DataFrame: DataFrame with resolution information.
     """
     data = {
-        "Resolution": [0, 1, 2, 3, 4, 5],
-        "Total number of cells": [122, 842, 5882, 41162, 288122, 2016842],
-        "Average cell area (km2)": [4357449.41, 609788.44, 86801.78, 12393.43, 1770.34, 252.90],
-        "Average edge length (Km)": [1281.256011, 483.0568391, 182.5129565, 68.97922179, 26.07175968, 9.854090990]
+        "Resolution": [0, 1, 2, 3, 4],
+        "Total number of cells": [122, 842, 5882, 41162, 288122],
+        "Average cell area (km2)": [4357449.41, 609788.44, 86801.78, 12393.43, 1770.34],
+        "Average edge length (Km)": [1281.256011, 483.0568391, 182.5129565, 68.97922179, 26.07175968]
     }
     df = pd.DataFrame(data)
     return df
@@ -108,10 +108,11 @@ def setup_done_ui():
     new_selected_time_bin_id = time_bins.index(selected_time_bin)
     # get the time bin and the hexagons for the selected time bin
     time_bin = st.session_state['time_bins_dist'][selected_time_bin]
+    # scale the distances to their geographical distance and save the predicted distances to scale the internal distances with it
+    time_bin, gen_distances_pred = scale_distances(time_bin, resolution=st.session_state['resolution'])
     # get the hexagons with there internal distance and the distance values for the selected time bin
     time_bin, hexagons = get_hexagons(time_bin)
-    # scale the distances to their geographical distance and save the predicted distances to scale the internal distances with it
-    time_bin, gen_distances_pred = scale_distances(time_bin)
+    
 
     # Initialize thresholds for distance values and isolated populations
     if 'threshold' not in st.session_state:
@@ -137,8 +138,7 @@ def setup_done_ui():
         # find the closest populations to the isolated populations
         st.session_state['closest_populations'], st.session_state['isolated_hex'] = find_closest_population(
             st.session_state['df'], st.session_state['selected_time_bin_id'], st.session_state['isolated_hex'], 
-            st.session_state['matrix'], st.session_state['isolated_threshold'], gen_distances_pred
-        )
+            st.session_state['matrix'], st.session_state['isolated_threshold'], gen_distances_pred, st.session_state['resolution'])
 
     # Checkbox to toggle showing migration routes and isolated populations
     st.session_state['show_migration'] = st.sidebar.checkbox("Show possible migration routes & isolated populations", False)
@@ -175,7 +175,8 @@ def setup_done_ui():
     # Draw migration routes and isolated populations if selected
     if st.session_state['show_migration']:
         m = draw_migration_for_time_bin(st.session_state['closest_populations'], m)
-        m = draw_hexagons(st.session_state['isolated_hex'], m,)
+        m = draw_hexagons(st.session_state['isolated_hex'] ,m, color="red")
+        m = draw_sample_hexagons(hexagons, m, zoom_start=zoom)
         
     m = add_legend(m)
     folium_static(m, width=800, height=600)

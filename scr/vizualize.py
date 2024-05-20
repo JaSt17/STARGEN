@@ -74,7 +74,7 @@ def draw_sample_hexagons(hex_dict, m=None, color='grey', zoom_start=1):
                 fill_opacity=0.0,
                 fill=True
             )
-            polygon.add_child(folium.Tooltip(f"Internal average sample distance: {sample_distance}"))
+            polygon.add_child(folium.Tooltip(f"Internal scaled genetic distance: {sample_distance}"))
             polygon.add_to(m)
 
     return m
