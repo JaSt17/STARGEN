@@ -36,17 +36,18 @@ def initialize_session():
     """
     Initialize the session state and display the initial setup UI.
     """
-    st.set_page_config(page_title="GeoGeneTrack", page_icon=":earth_americas:")
+    st.set_page_config(page_title="TMGB (Temporal Mapping of Genetic Barriers)", page_icon=":earth_americas:")
     
     # Display the logo and title
     col1, col2 = st.columns([1, 2])
     with col2:
-        st.image("img/GeoGenTrack_logo.png", width=100)
+        st.image("img/TMGB.png", width=100)
     with col1:
-        st.title('GeoGenTrack')
+        st.title('TMGB')
+        st.write('(Temporal Mapping of Genetic Barriers)')
 
     # Slider for selecting the number of time bins
-    st.session_state['time_bins'] = st.slider('Select a number of time bins', 1, 30, 14, 1)
+    st.session_state['time_bins'] = st.slider('Select a number of time bins', 5, 30, 14, 1)
     # Checkbox to enable same time bin length
     st.session_state['same_age_range'] = st.checkbox('Same age range for each time bin', value=True)
 
@@ -72,7 +73,7 @@ def initialize_session():
 
     # Button to run the tool
     if st.button('Run'):
-        st.text('Running GeoGeneTrack...')
+        st.text('Running TMGB...')
         st.session_state['setup_done'] = True
         # Load the distance matrix to the session state
         path_to_matrix = os.getcwd() + "/1_dist_matrix/eucl_dist.pkl"
