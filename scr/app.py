@@ -129,7 +129,7 @@ def setup_done_ui():
     # Check if the threshold or the selected time bin has changed
     if new_isolated_threshold != st.session_state['isolated_threshold'] or new_selected_time_bin_id != st.session_state['selected_time_bin_id']:
         # get the isolated hexagons and the barrier lines for the selected time bin
-        st.session_state['isolated_hex'], st.session_state['barrier_lines'], st.session_state['barrier_hex'] = get_isolated_hex_and_barriers(time_bin, hexagons, st.session_state['isolated_threshold'], st.session_state['resolution'] * 6)
+        st.session_state['isolated_hex'], st.session_state['barrier_lines'], st.session_state['barrier_hex'] = get_isolated_hex_and_barriers(time_bin, hexagons, st.session_state['isolated_threshold'], st.session_state['resolution'] * 8)
         # impute the missing hexagons until a range of 2 times the resolution is reached
         st.session_state['imputed_hex'] = impute_missing_hexagons(st.session_state['barrier_hex'], num_runs=st.session_state['resolution'] * 2)
         # save the new threshold for isolated populations

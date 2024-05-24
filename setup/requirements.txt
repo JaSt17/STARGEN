@@ -1,0 +1,13 @@
+python=3.12.2
+streamlit=1.32.0
+streamlit-folium=0.20.0
+folium=0.16.0
+pandas=2.2.1
+numpy=1.26.4
+scipy=1.13.0
+statsmodels=0.14.1
+h3-py=3.7.6
+haversine=2.8.1
+branca=0.7.1
+matplotlib=3.8.3
+openpyxl=3.1.2
