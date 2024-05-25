@@ -3,7 +3,6 @@ import folium
 from streamlit_folium import folium_static
 import pandas as pd
 import os
-from label_samples_time_hexa import label_samples
 from vizualize import *
 from func import *
 
