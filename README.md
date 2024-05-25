@@ -83,7 +83,7 @@ Ensure the path to the Excel file is correct when running the script to avoid er
 
 ## Pre-Execution Checklist
 
-- Ensure the conda environment "tmbg" or your chosen environment is created and activated.
+- Ensure the conda environment "tmgb" or your chosen environment is created and activated.
 - Ensure your working directory contains the following files:
   - `0_data/Ancient_samples.txt`
   - `1_dist_matrix/eucl_dist.pkl`
@@ -101,18 +101,18 @@ streamlit run scr/app.py
 On Windows run:
 
 ```powershell
-streamlit run scrpp.py
+streamlit run scr\app.py
 ```
 
 This command should automatically open a browser window with the TMGB application.
 
 ### Application Features
 
-- **Home Screen**: Customize the number of time segments and the clarity of the hexagonal zones. Access additional details through the buttons on the home screen.
+- **Home Screen**: Customize the number of time bins and the resolution of the hexagonal zones. Access additional details through the buttons on the home screen.
 
   ![Home Screen](./img/home_screen.png "Home Screen")
 
-- **Main Screen**: Provides additional settings to adjust the visualization of genetic distances.
+- **Main Screen**: The Sidebar on the main screen provides additional settings to adjust the visualization of genetic distances.
 
   ![Main Screen](./img/main_screen.png "Main Screen")
 
@@ -123,7 +123,7 @@ This command should automatically open a browser window with the TMGB applicatio
     - **Distance lines**: Display underlying distance lines for a detailed view.
     - **Default map window**: Set standard coordinates and zoom level for specific areas of interest.
 
-Now, you can explore genetic distances over time using TMGB.
+Now, you can explore genetic distances over time using the interactive folium map from TMGB.
 
 ## Repository Structure
 
@@ -132,7 +132,7 @@ Now, you can explore genetic distances over time using TMGB.
   - `aDNA_30GPs_AADR.xlsx`: Contains only the AADR dataset samples.
   - `aDNA_30GPs_new_samples.xlsx`: Contains the new samples gathered for this study.
 
-  Each of these files lists the Genetic ID, the Publication, the Date of the sample, the Locality, the Political entity, the coordinates, the SNPs hit on autosomal targets, and the 30 Admixture components.
+  Each of these files lists the Genetic ID, the Publication, the Date of the sample, the Locality, the Political entity, the coordinates, the SNPs hit on autosomal targets, and the values for the 30 Admixture components.
 
 - **scr**: Contains all the scripts necessary for the tool.
   - `app.py`: Holds the code for the Streamlit application. It allows the interactive usage of the tool.
