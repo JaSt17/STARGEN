@@ -66,7 +66,7 @@ python scr/initial_run.py 0_data/aDNA_30GPs.xlsx
 On Windows run:
 
 ```powershell
-python scr\initial_run.py 0_dataDNA_30GPs.xlsx
+python scr\initial_run.py 0_data\aDNA_30GPs.xlsx
 ```
 
 This script performs the initial data processing, which includes:

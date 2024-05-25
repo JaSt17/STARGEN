@@ -131,7 +131,7 @@ def main():
     print("Filtering ancient and modern samples...")
     write_sample_list(df, dict_path)
     
-    print("Calculating IBS distance matrix...")
+    print("Calculating euclidean distance matrix...")
     create_dist_matrix(df)
 
 if __name__ == "__main__":
