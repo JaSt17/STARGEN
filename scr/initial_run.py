@@ -1,7 +1,18 @@
 # This script is responsible for the initial run of the pipeline.
-# It reads the excel file with the ancient samples, filters the data, and writes the ancient samples to a new file.
+# It reads the excel file with the samples, filters the data, and writes the samples to a new file.
 # It also calculates the euclidean distance matrix from the plink output and writes it to a pickle file.
 # The script is called with the path to the excel file as an argument.
+
+#-------------------------------------------------------------------------------------
+# NOTE: If you want to use this script with a different Excel file,                  
+# you need to adjust the columns list underneath                
+columns = ['Genetic ID',
+                'Lat.',
+                'Long.', 
+                'Date mean in BP in years before 1950 CE [OxCal mu for a direct radiocarbon date, and average of range for a contextual date]']
+# also change the index where the the distance values begins
+index = 9 # Assuming data starts from the 10th column
+#-------------------------------------------------------------------------------------
 
 import pickle
 import os
@@ -29,21 +40,24 @@ def filter_df(df):
     return filtered_df
 
 
-def write_sample_list(df, path):
+def write_sample_list(df, path, columns):
     """
-    Writes the ancient samples to a new file.
+    Writes the samples to a new file.
 
     Parameters:
-    - df (pd.DataFrame): The input DataFrame containing the sample data.
+    - df (pd.DataFrame): The input DataFrame containing the sample data (needs to include 'Genetic ID', 'Lat.', 'Long.', and 'Date mean in BP' columns)
     - path (str): The path to the directory where the file will be saved.
 
     Returns:
     - None
     """
     # Extract the required columns and convert them to string
-    columns = ['#', 'Genetic ID', 'Political Entity', 'Lat.', 'Long.', 
-                'Date mean in BP in years before 1950 CE [OxCal mu for a direct radiocarbon date, and average of range for a contextual date]']
-    data = df[columns].astype(str)
+    # try to find the columns in the dataframe and return an error if no match:
+    try:
+        data = df[columns].astype(str)
+    except KeyError as e:
+        print("ERROR:\nCould not find all necessary columns in your excel file.\nPlease change the names of your columns according to your provided excel file in the initial_run.py script.")
+        sys.exit(1)
 
     # Prepare the sample list
     sample_list = data.values.tolist()
@@ -51,14 +65,14 @@ def write_sample_list(df, path):
     # Write the data to a new file
     file_path = f'{path}/Ancient_samples.txt'
     with open(file_path, 'w') as f:
-        f.write('Index\tID\tCountry\tLatitude\tLongitude\tAge\n')
+        f.write('ID\tLatitude\tLongitude\tAge\n')
         for sample in sample_list:
             f.write('\t'.join(sample) + '\n')
 
 
-def create_dist_matrix(df):
+def create_dist_matrix(df, columns, index):
     """
-    Calculates the Euclidean distance matrix from the admixture data and writes it to a pickle file.
+    Calculates the Euclidean distance matrix from the samples and writes it to a pickle file.
 
     Parameters:
     - df (pd.DataFrame): The input DataFrame containing 'Genetic ID', 'Lat.', 'Long.', and admixture columns.
@@ -67,11 +81,21 @@ def create_dist_matrix(df):
     - None
     """
     # Extract the needed columns from the DataFrame
-    names = df['Genetic ID']
-    lat = df['Lat.']
-    long = df['Long.']
-    admix = df.iloc[:, 9:]  # Assuming admixture data starts from the 10th column
-    
+    names = df[columns[0]]
+    lat = df[columns[1]]
+    long = df[columns[2]]
+    try:
+        admix = df.iloc[:, index:]  # Assuming data starts from the 10th column
+        admix.astype(float)
+    except:
+        print("There is something wrong with the index you set for the distance values.\nPlease check your provided index in the intial_run.py file.")
+        sys.exit(1)
+    # check if the distance values dataframe is empty and if so stop the process and let the user know.
+    if admix.empty:
+        print("Could not find distance values.\nPlease check your provided index in the intial_run.py file.")
+        sys.exit(1)
+    # tell the user the size of their distance vector so they can adjsut it if it is not correct.
+    print(f"Your distance vector holds {admix.shape[1]} values.\nIf that is not correct, please check your provided index in the intial_run.py file. ")
     # Convert latitude and longitude to float
     lat = lat.astype(float)
     long = long.astype(float)
@@ -129,13 +153,12 @@ def main():
     
     # Process the filtered data
     print("Filtering ancient and modern samples...")
-    write_sample_list(df, dict_path)
+    write_sample_list(df, dict_path, columns)
     
     print("Calculating euclidean distance matrix...")
-    create_dist_matrix(df)
+    create_dist_matrix(df, columns, index)
+    
+    print("Finished succesfully!")
 
 if __name__ == "__main__":
     main()
-
-    
-    
