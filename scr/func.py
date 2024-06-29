@@ -1,4 +1,5 @@
 import pandas as pd
+import math
 import numpy as np
 from h3 import h3
 from collections import defaultdict
@@ -123,7 +124,7 @@ def calc_neighbor_dist(hexagons, dist_matrix, time_bin_df, hex_col):
             # Calculate the average distance between the hexagon and its neighbor
             distance = calc_avg_dist(ids_in_hexagon, ids_in_neighbor, dist_matrix)
 
-            averages[pair] = round(distance, 2)
+            averages[pair] = round(distance, 5)
 
     return averages
 
@@ -251,7 +252,7 @@ def get_isolated_hex_and_barriers(time_bin, hexagons, threshold, allowed_distanc
             # Get the pair of dots that the two hexagons share
             shared_boundary = frozenset([x for x in boundary1 if x in boundary2])
             # Add the line and its distance to the dictionary
-            barrier_lines[shared_boundary] = round(distance, 2)
+            barrier_lines[shared_boundary] = distance
             hex_dist_to_direct_neighbors[pair[0]].append(distance)
             hex_dist_to_direct_neighbors[pair[1]].append(distance)
         else:
@@ -430,8 +431,10 @@ def scale_distances(time_bin, exsiting_pred=None, resolution=3):
         Returns:
         - The distance in kilometers between the two hexagons.
         """
+        # if it is the distance to itselve return a fiexed value based on the resoultion
         if hex2 is None:
             return 1281/(2.65**resolution)
+        # else calculate the distance between the two hexagons based on the haversine formula
         coord1 = h3.h3_to_geo(hex1)
         coord2 = h3.h3_to_geo(hex2)
         return haversine(coord1, coord2)
@@ -459,7 +462,12 @@ def scale_distances(time_bin, exsiting_pred=None, resolution=3):
             km_distance = gen_distances_pred[:, 0][np.argmin(np.abs(gen_distances_pred[:, 0] - km_distance))]
         gen_distance = time_bin[pair]
         gen_distance_pred = gen_distances_pred[gen_distances_pred[:, 0] == km_distance][:, 1][0]
-        output[pair] = round(gen_distance / gen_distance_pred,2)
+        # check if the predicted distance is 0
+        if gen_distance == 0:
+            output[pair] = 0
+        # else get the log 2 of the ratio of the genetic distance to the predicted genetic distance
+        else:
+            output[pair] = round(math.log2(gen_distance / gen_distance_pred),2)
 
     return output, gen_distances_pred
 
@@ -480,30 +488,8 @@ def get_distance_lines(time_bin):
         coord2 = h3.h3_to_geo(hex2)
         # Create a frozenset of coordinates to represent the line
         shared_boundary = frozenset([coord1, coord2])
-        lines[shared_boundary] = round(value, 2)
+        lines[shared_boundary] = value
     return lines
-
-
-def get_min_max_dist(time_bin):
-    """
-    Gets the minimum and maximum distance values for a given time bin.
-
-    Parameters:
-    - time_bin: A dictionary where keys are pairs of hexagons and values are the distances between them.
-
-    Returns:
-    - tuple: A tuple containing the minimum and maximum distance values.
-    """
-    min_dist = float('inf')
-    max_dist = float('-inf')
-    
-    for distance in time_bin.values():
-        if distance < min_dist:
-            min_dist = distance
-        if distance > max_dist:
-            max_dist = distance
-            
-    return min_dist, max_dist
 
 
 def rename_time_bins(df):

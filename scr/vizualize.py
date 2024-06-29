@@ -79,7 +79,7 @@ def draw_sample_hexagons(hex_dict, m=None, color='grey', zoom_start=1):
 
     return m
 
-def draw_hexagons(hexagons, m=None, color='white', zoom_start=1, value=None, opacity=0.5, imputed=False):
+def draw_hexagons(hexagons, m=None, color='white', zoom_start=1, value=None, opacity=0.3, imputed=False):
     """
     Draws hexagons on a map.
 
@@ -144,7 +144,7 @@ def draw_hexagons_with_values(hex_dict, m=None, zoom_start=1, threshold=0.0, imp
     for hexagon, value in zip(hexagons, values):
         if value < threshold:
             continue
-        color = mcolors.to_hex(cmap(value / 3))
+        color = mcolors.to_hex(cmap(value + 4 / 8))
         m = draw_hexagons([hexagon], m, color=color, zoom_start=zoom_start, value=value, opacity=0.5, imputed=imputed)
 
     return m
@@ -174,7 +174,7 @@ def draw_barriers(barriers_dict, m=None, zoom_start=1, threshold=0.0):
     for barrier, value in barriers_dict.items():
         if value < threshold:
             continue
-        color = mcolors.to_hex(cmap(value / 3))
+        color = mcolors.to_hex(cmap(value + 2 / 4))
         barrier_coords = list(barrier)
 
         try:
@@ -229,11 +229,15 @@ def draw_migration_for_time_bin(time_bin, m, color="green"):
     return m
 
 
+import matplotlib.colors as mcolors
+
+import matplotlib.colors as mcolors
+
+import matplotlib.colors as mcolors
+
 def get_color_gradient():
     """
-    Create a custom colormap with a gradient of colors ranging from sand yellow to turquoise blue.
-
-    The colormap is designed with specific color transitions at defined points.
+    Create a custom colormap with a gradient of colors ranging from sand yellow to orange to dark red.
 
     Returns:
     cmap : LinearSegmentedColormap
@@ -242,18 +246,9 @@ def get_color_gradient():
     
     # Define the colors for the colormap
     colors = [
-        (0.0, 0.95, 0.87, 0.55),  # Sand color yellow
-        (0.12, 0.92, 0.78, 0.48),  # Intermediate yellow-brown
-        (0.24, 0.87, 0.69, 0.38),  # Yellow-brown tone
-        (0.36, 0.82, 0.65, 0.36),  # Slightly darker brown
-        (0.465, 0.78, 0.62, 0.34),  # Darker brown
-        (0.466, 0.75, 0.68, 0.50),  # Transition color - intermediate brown to light blue-gray
-        (0.467, 0.66, 0.72, 0.73),  # Light blue-gray
-        (0.55, 0.63, 0.74, 0.78),  # Slightly darker blue-gray
-        (0.6, 0.57, 0.76, 0.85),  # Intermediate light blue
-        (0.75, 0.48, 0.82, 0.95),  # Light blue
-        (0.9, 0.42, 0.76, 0.91),  # Intermediate turquoise
-        (1.0, 0.36, 0.70, 0.95)   # Turquoise blue
+        (0.0, 0.93, 0.79, 0.69),  # Sand yellow
+        (0.5, 1.0, 0.65, 0.0),    # Orange
+        (1.0, 0.55, 0.0, 0.0)     # Dark red
     ]
 
     # Normalize colors to be between 0 and 1
@@ -283,7 +278,7 @@ def add_legend(m):
     {% macro html(this, kwargs) %}
     <div id='maplegend' class='maplegend' 
         style='position: absolute; z-index: 9999; background-color: rgba(255, 255, 255, 0.5);
-        border-radius: 6px; padding: 10px; font-size: 10.5px; width: 170px; height: 110px; right: 20px; top: 20px; cursor: move;'>     
+        border-radius: 6px; padding: 10px; font-size: 10.5px; width: 180px; height: 110px; right: 20px; top: 20px; cursor: move;'>     
     <div class='legend-scale'>
     <ul class='legend-labels'>
         <li><svg height="12" width="12">
@@ -296,26 +291,17 @@ def add_legend(m):
     </ul>
     </div>
     <div class='legend-gradient'>
-        <span style="font-weight: bold;">Scaled Genetic Distances</span>
+        <span style="font-weight: bold;">Scaled Genetic Distances (log2)</span>
         <span style='background: linear-gradient(to right, 
-            rgb(242, 222, 140) 0%,       /* Sand color yellow */
-            rgb(235, 199, 123) 20%,      /* Intermediate yellow-brown */
-            rgb(222, 176, 97) 40%,       /* Yellow-brown tone */
-            rgb(209, 165, 92) 45%,       /* Slightly darker brown */
-            rgb(199, 159, 86) 49.5%,       /* Darker brown */
-            rgb(191, 173, 128) 50%,    /* Transition color - intermediate brown to light blue-gray */
-            rgb(169, 184, 186) 51%,      /* Light blue-gray */
-            rgb(160, 189, 199) 55%,      /* Slightly darker blue-gray */
-            rgb(145, 194, 218) 60%,      /* Intermediate light blue */
-            rgb(123, 209, 242) 75%,      /* Light blue */
-            rgb(107, 194, 232) 90%,      /* Intermediate turquoise */
-            rgb(92, 178, 242) 100%       /* Turquoise blue */
+            rgb(237, 201, 175) 0%,     /* Sand yellow */
+            rgb(255, 165, 0) 50%,      /* Orange */
+            rgb(139, 0, 0) 100%        /* Dark red */
         );
         width: 100%; height: 10px; display: block;'></span>
         <div style='display: flex; justify-content: space-between;'>
+            <span>-2</span>
             <span>0</span>
-            <span>1.5</span>
-            <span>3</span>
+            <span>2</span>
         </div>
     </div>
     </div> 

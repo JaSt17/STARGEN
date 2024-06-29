@@ -116,14 +116,14 @@ def setup_done_ui():
 
     # Initialize thresholds for distance values and isolated populations
     if 'threshold' not in st.session_state:
-        st.session_state['threshold'] = 0.0
-        st.session_state['isolated_threshold'] = 1.5
+        st.session_state['threshold'] = -10.0
+        st.session_state['isolated_threshold'] = 1.0
 
     # Slider to choose the threshold for the distance values to display
-    st.session_state['threshold'] = st.sidebar.slider('Which distances should be displayed?', 0.0, 3.0, st.session_state['threshold'], 0.01)
+    st.session_state['threshold'] = st.sidebar.slider('Which distances should be displayed?', -10.0, 10.0, st.session_state['threshold'], 0.1)
     
     # Slider to choose the threshold for isolated populations
-    new_isolated_threshold = st.sidebar.slider('Which distances are considered as isolated populations?', 0.0, 3.0, st.session_state['isolated_threshold'], 0.01)
+    new_isolated_threshold = st.sidebar.slider('Which distances are considered as isolated populations?', 0.0, 4.0, st.session_state['isolated_threshold'], 0.01)
 
     # Check if the threshold or the selected time bin has changed
     if new_isolated_threshold != st.session_state['isolated_threshold'] or new_selected_time_bin_id != st.session_state['selected_time_bin_id']:
@@ -162,21 +162,21 @@ def setup_done_ui():
     if st.session_state['show_lines']:
         m = draw_sample_hexagons(hexagons, m, zoom_start=zoom)
         lines = get_distance_lines(time_bin)
-        m = draw_barriers(lines, m)
+        m = draw_barriers(lines, m, threshold=-10.0)
     else:
         m = draw_hexagons_with_values(st.session_state['barrier_hex'], m, threshold=st.session_state['threshold'])
         m = draw_hexagons_with_values(st.session_state['imputed_hex'], m, threshold=st.session_state['threshold'], imputed=True)
         m = draw_sample_hexagons(hexagons, m, zoom_start=zoom)
-
-    # Draw barriers if there are any
-    if len(st.session_state['barrier_lines']) > 0:
-        m = draw_barriers(st.session_state['barrier_lines'], m, threshold=st.session_state['threshold'])
 
     # Draw migration routes and isolated populations if selected
     if st.session_state['show_migration']:
         m = draw_migration_for_time_bin(st.session_state['closest_populations'], m)
         m = draw_hexagons(st.session_state['isolated_hex'] ,m, color="red")
         m = draw_sample_hexagons(hexagons, m, zoom_start=zoom)
+        
+    # Draw barriers if there are any
+    if len(st.session_state['barrier_lines']) > 0:
+        m = draw_barriers(st.session_state['barrier_lines'], m, threshold=st.session_state['threshold'])
         
     m = add_legend(m)
     folium_static(m, width=800, height=600)
