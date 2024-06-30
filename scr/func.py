@@ -207,6 +207,7 @@ def get_isolated_hex_and_barriers(time_bin, hexagons, threshold, allowed_distanc
         - isolated_hex (list): List of hexagons considered isolated.
         - barrier_lines (dict): Dictionary of shared boundaries with their distances.
         - barrier_hex (dict): Dictionary of hexagons with their average barrier distances.
+        - new_time_bin (dict): new Dictionary of pairs of hexagons with their distances only containing the ones that are within the allowed distance
     """
     
     def find_h3_line(hex_start, hex_end, max_iterations=10):
@@ -240,6 +241,7 @@ def get_isolated_hex_and_barriers(time_bin, hexagons, threshold, allowed_distanc
     barrier_lines = defaultdict(float)
     barrier_hex = defaultdict(list)
     hex_dist_to_direct_neighbors = defaultdict(list)
+    new_time_bin = defaultdict(float)
     
     # Loop over all pairs of hexagons in the time bin
     for pair, distance in time_bin.items():
@@ -255,12 +257,16 @@ def get_isolated_hex_and_barriers(time_bin, hexagons, threshold, allowed_distanc
             barrier_lines[shared_boundary] = distance
             hex_dist_to_direct_neighbors[pair[0]].append(distance)
             hex_dist_to_direct_neighbors[pair[1]].append(distance)
+            # add the pair and the distance to the new time bin
+            new_time_bin[frozenset(pair)] = distance
         else:
             # Get the line between the two hexagons using the find_h3_line function
             line = find_h3_line(pair[0], pair[1])
             if line is not None and len(line) <= allowed_distance:
                 for hex in line:
                     barrier_hex[hex].append(distance)
+                # add the pair and the distance to the new time bin
+                new_time_bin[frozenset(pair)] = distance
 
     # Calculate the average distance for each hexagon and round it to 2 decimal places
     barrier_hex = {hex: round(sum(distances) / len(distances), 2) for hex, distances in barrier_hex.items()}
@@ -273,7 +279,7 @@ def get_isolated_hex_and_barriers(time_bin, hexagons, threshold, allowed_distanc
     # extract the hexagons that are isolated given the threshold
     isolated_hex = [hex for hex, distances in hex_dist_to_direct_neighbors.items() if all(d >= threshold for d in distances)]
     
-    return isolated_hex, barrier_lines, barrier_hex
+    return isolated_hex, barrier_lines, barrier_hex, new_time_bin
 
 
 

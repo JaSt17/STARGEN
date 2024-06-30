@@ -124,11 +124,15 @@ def setup_done_ui():
     
     # Slider to choose the threshold for isolated populations
     new_isolated_threshold = st.sidebar.slider('Which distances are considered as isolated populations?', 0.0, 4.0, st.session_state['isolated_threshold'], 0.01)
+    
+    new_allowed_distance = st.sidebar.slider('How many hexagons should be considered as max distance ?', 1, 30, 10)
 
     # Check if the threshold or the selected time bin has changed
-    if new_isolated_threshold != st.session_state['isolated_threshold'] or new_selected_time_bin_id != st.session_state['selected_time_bin_id']:
+    if new_isolated_threshold != st.session_state['isolated_threshold'] or new_selected_time_bin_id != st.session_state['selected_time_bin_id'] or new_allowed_distance != st.session_state['allowed_distance']:
+        # save the new allowed distance 
+        st.session_state['allowed_distance'] = new_allowed_distance
         # get the isolated hexagons and the barrier lines for the selected time bin
-        st.session_state['isolated_hex'], st.session_state['barrier_lines'], st.session_state['barrier_hex'] = get_isolated_hex_and_barriers(time_bin, hexagons, st.session_state['isolated_threshold'], st.session_state['resolution'] * 8)
+        st.session_state['isolated_hex'], st.session_state['barrier_lines'], st.session_state['barrier_hex'], st.session_state['new_time_bin'] = get_isolated_hex_and_barriers(time_bin, hexagons, st.session_state['isolated_threshold'], st.session_state['allowed_distance'])
         # impute the missing hexagons until a range of 2 times the resolution is reached
         st.session_state['imputed_hex'] = impute_missing_hexagons(st.session_state['barrier_hex'], num_runs=st.session_state['resolution'] * 2)
         # save the new threshold for isolated populations
@@ -161,7 +165,8 @@ def setup_done_ui():
     # Draw lines or hexagons based on the selected options
     if st.session_state['show_lines']:
         m = draw_sample_hexagons(hexagons, m, zoom_start=zoom)
-        lines = get_distance_lines(time_bin)
+        # use the new time bin to only show distnaces that are in the allowed distance
+        lines = get_distance_lines(st.session_state['new_time_bin'])
         m = draw_barriers(lines, m, threshold=-10.0)
     else:
         m = draw_hexagons_with_values(st.session_state['barrier_hex'], m, threshold=st.session_state['threshold'])

@@ -144,7 +144,7 @@ def draw_hexagons_with_values(hex_dict, m=None, zoom_start=1, threshold=0.0, imp
     for hexagon, value in zip(hexagons, values):
         if value < threshold:
             continue
-        color = mcolors.to_hex(cmap(value + 4 / 8))
+        color = mcolors.to_hex(cmap((value + 1)/2))
         m = draw_hexagons([hexagon], m, color=color, zoom_start=zoom_start, value=value, opacity=0.5, imputed=imputed)
 
     return m
@@ -174,11 +174,11 @@ def draw_barriers(barriers_dict, m=None, zoom_start=1, threshold=0.0):
     for barrier, value in barriers_dict.items():
         if value < threshold:
             continue
-        color = mcolors.to_hex(cmap(value + 2 / 4))
+        color = mcolors.to_hex(cmap((value + 1)/2))
         barrier_coords = list(barrier)
 
         try:
-            polyline = folium.PolyLine(barrier_coords, color=color)
+            polyline = folium.PolyLine(barrier_coords, color=color, opacity=0.3)
             polyline.add_child(folium.Tooltip(str(value)))
             polyline.add_to(m)
         except Exception as e:
@@ -299,9 +299,9 @@ def add_legend(m):
         );
         width: 100%; height: 10px; display: block;'></span>
         <div style='display: flex; justify-content: space-between;'>
-            <span>-2</span>
+            <span>-1</span>
             <span>0</span>
-            <span>2</span>
+            <span>1</span>
         </div>
     </div>
     </div> 
