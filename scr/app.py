@@ -112,7 +112,6 @@ def setup_done_ui():
     time_bin, gen_distances_pred = scale_distances(time_bin, resolution=st.session_state['resolution'])
     # get the hexagons with there internal distance and the distance values for the selected time bin
     time_bin, hexagons = get_hexagons(time_bin)
-    
 
     # Initialize thresholds for distance values and isolated populations
     if 'threshold' not in st.session_state:

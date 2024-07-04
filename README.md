@@ -55,6 +55,33 @@ Before running the tool, ensure you have the following software and libraries in
 
 Before running the tool for the first time, ensure you have the "aDNA_30GPs.xlsx" file in the `0_data/` directory. This file contains the ancient DNA samples necessary for the analysis.
 
+To use a different samples/distance file, you need to modify the initial_run.py script to match your file's format. Specifically, you must update the script with the appropriate column names and the index from which the distance values start in your Excel file.
+
+File Requirements
+Your file should contain the following columns:
+
+ID: A unique identifier for each sample.
+LAT: Latitude of the geographic coordinates of the sample.
+LON: Longitude of the geographic coordinates of the sample.
+Age: The age of the sample in years before 1950 AD. For example, if a sample is dated to 200 BC, the age should be recorded as 2150.
+In addition to these columns, your file should include as many columns as there are elements in your distance vector. In our case, this is 30.
+
+Example file:
+| ID        | LAT        | LON        | Age       | Distance 1 | Distance 2 | ... | Distance 10 |
+|-----------|------------|------------|-----------|------------|------------|-----|-------------|
+| Sample 1  | Latitude 1 | Longitude 1| Age 1     | Value 1    | Value 2    | ... | Value 10    |
+| Sample 2  | Latitude 2 | Longitude 2| Age 2     | Value 1    | Value 2    | ... | Value 10    |
+| Sample 3  | Latitude 3 | Longitude 3| Age 3     | Value 1    | Value 2    | ... | Value 10    |
+
+
+Steps to Adjust the Script
+Open the initial_run.py script in your preferred text editor or IDE.
+Locate the section where you can change the column names and the index.
+Update the script to reflect the correct column names for your file.
+Adjust the index to match where the distance values begin in your file.
+
+In case you are using your on excel file please change "0_data/aDNA_30GPs.xlsx" to the path to your file.
+
 Run the initial script to process the data and create the necessary distance matrix and other files:
 
 On Linux run:
