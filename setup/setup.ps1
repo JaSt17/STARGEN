@@ -1,5 +1,5 @@
 # Name of the environment
-$ENV_NAME = "tmgb"
+$ENV_NAME = "stargen"
 
 # List of Conda packages
 $CONDA_PACKAGES = @(
@@ -47,3 +47,8 @@ foreach ($package in $CONDA_PACKAGES[1..($CONDA_PACKAGES.Length - 1)]) {
 }
 
 Write-Host "All packages have been installed successfully."
+
+# activate the environment
+conda activate $ENV_NAME
+
+Write-Host "Environment '$ENV_NAME' is ready to use."

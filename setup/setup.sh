@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Name of the environment
-ENV_NAME="tmbg"
+ENV_NAME="stargen"
 
 # List of packages 
 CONDA_PACKAGES=(
@@ -49,3 +49,8 @@ do
 done
 
 echo "All packages have been installed successfully."
+
+# Activate the Conda environment
+conda activate "$ENV_NAME"
+
+echo "Environment '$ENV_NAME' is ready to use."

@@ -5,6 +5,7 @@ from branca.element import Template, MacroElement
 import matplotlib.colors as mcolors
 import base64
 from folium.plugins import AntPath
+import matplotlib.colors as mcolors
 
 
 def split_hexagon_if_needed(hexagon):
@@ -78,6 +79,7 @@ def draw_sample_hexagons(hex_dict, m=None, color='grey', zoom_start=1):
             polygon.add_to(m)
 
     return m
+
 
 def draw_hexagons(hexagons, m=None, color='white', zoom_start=1, value=None, opacity=0.3, imputed=False):
     """
@@ -229,12 +231,6 @@ def draw_migration_for_time_bin(time_bin, m, color="green"):
     return m
 
 
-import matplotlib.colors as mcolors
-
-import matplotlib.colors as mcolors
-
-import matplotlib.colors as mcolors
-
 def get_color_gradient():
     """
     Create a custom colormap with a gradient of colors ranging from sand yellow to orange to dark red.
@@ -285,7 +281,7 @@ def add_legend(m):
             <polygon points="5,0 10,3.33 10,8.67 5,12 0,8.67 0,3.33" style="fill:none;opacity: 0.5;stroke:black" />
             </svg>Area with Samples</li>
         <li><svg height="12" width="12">
-            <polygon points="5,0 10,3.33 10,8.67 5,12 0,8.67 0,3.33" style="fill:red;opacity: 0.7;stroke:none" />
+            <polygon points="5,0 10,3.33 10,8.67 5,12 0,8.67 0,3.33" style="fill:black;opacity: 0.6;stroke:none" />
             </svg>Isolated Population</li>
         <li><svg height="12" width="10"><line x1="0" y1="2" x2="10" y2="10" style="stroke:green;stroke-width:2" /></svg>Possible Migration Route</li>
     </ul>

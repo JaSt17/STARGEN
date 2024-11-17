@@ -35,15 +35,16 @@ def initialize_session():
     """
     Initialize the session state and display the initial setup UI.
     """
-    st.set_page_config(page_title="TMGB (Temporal Mapping of Genetic Barriers)", page_icon=":earth_americas:")
+    st.set_page_config(page_title="STARGEN (Spatio-Temporal Analysis and Reconstruction of GENetic Barriers)", page_icon=":earth_americas:")
     
     # Display the logo and title
     col1, col2 = st.columns([1, 2])
-    with col2:
-        st.image("img/TMGB.png", width=100)
+    # change the columns width
     with col1:
-        st.title('TMGB')
-        st.write('(Temporal Mapping of Genetic Barriers)')
+        st.title('STARGEN')
+    with col2:
+        st.image("img/STARGEN.png", width=80)
+    st.write('**(Spatio-Temporal Analysis and Reconstruction of GENetic Barriers)**')
 
     # Slider for selecting the number of time bins
     st.session_state['time_bins'] = st.slider('Select a number of time bins', 5, 30, 14, 1)
@@ -72,7 +73,7 @@ def initialize_session():
 
     # Button to run the tool
     if st.button('Run'):
-        st.text('Running TMGB...')
+        st.text('Running STARGEN...')
         st.session_state['setup_done'] = True
         # Load the distance matrix to the session state
         path_to_matrix = os.getcwd() + "/1_dist_matrix/eucl_dist.pkl"
@@ -115,16 +116,16 @@ def setup_done_ui():
 
     # Initialize thresholds for distance values and isolated populations
     if 'threshold' not in st.session_state:
-        st.session_state['threshold'] = -10.0
+        st.session_state['threshold'] = -5.0
         st.session_state['isolated_threshold'] = 1.0
 
     # Slider to choose the threshold for the distance values to display
-    st.session_state['threshold'] = st.sidebar.slider('Which distances should be displayed?', -10.0, 10.0, st.session_state['threshold'], 0.1)
+    st.session_state['threshold'] = st.sidebar.slider('Minimal distance value to display?', -5.0, 5.0, st.session_state['threshold'], 0.1)
     
     # Slider to choose the threshold for isolated populations
-    new_isolated_threshold = st.sidebar.slider('Which distances are considered as isolated populations?', 0.0, 4.0, st.session_state['isolated_threshold'], 0.01)
+    new_isolated_threshold = st.sidebar.slider('Minimal distance value to be considered as isolated?', 0.0, 4.0, st.session_state['isolated_threshold'], 0.1)
     
-    new_allowed_distance = st.sidebar.slider('How many hexagons should be considered as max distance ?', 1, 30, 10)
+    new_allowed_distance = st.sidebar.slider('Number of hexagons to consider as neighborhood?', 1, 25, 10)
 
     # Check if the threshold or the selected time bin has changed
     if new_isolated_threshold != st.session_state['isolated_threshold'] or new_selected_time_bin_id != st.session_state['selected_time_bin_id'] or new_allowed_distance != st.session_state['allowed_distance']:
@@ -143,10 +144,12 @@ def setup_done_ui():
             st.session_state['df'], st.session_state['selected_time_bin_id'], st.session_state['isolated_hex'], 
             st.session_state['matrix'], st.session_state['isolated_threshold'], gen_distances_pred, st.session_state['resolution'])
 
-    # Checkbox to toggle showing migration routes and isolated populations
-    st.session_state['show_migration'] = st.sidebar.checkbox("Show possible migration routes & isolated populations", False)
+    # Checkbox to toggle showing possible migration routes
+    st.session_state['show_migration'] = st.sidebar.checkbox("Show possible migration routes", False)
+    # Checkbox to toggle showing isolated populations
+    st.session_state['show_isolated'] = st.sidebar.checkbox("Show isolated populations", False)
     # Checkbox to toggle showing distance lines
-    st.session_state['show_lines'] = st.sidebar.checkbox("Show distance lines", False)
+    st.session_state['show_lines'] = st.sidebar.checkbox("Show line representation", False)
 
     # Set initial map state if it does not exist
     if 'map_state' not in st.session_state:
@@ -172,10 +175,14 @@ def setup_done_ui():
         m = draw_hexagons_with_values(st.session_state['imputed_hex'], m, threshold=st.session_state['threshold'], imputed=True)
         m = draw_sample_hexagons(hexagons, m, zoom_start=zoom)
 
-    # Draw migration routes and isolated populations if selected
+    # Draw migration routes if selected
     if st.session_state['show_migration']:
         m = draw_migration_for_time_bin(st.session_state['closest_populations'], m)
-        m = draw_hexagons(st.session_state['isolated_hex'] ,m, color="red")
+        m = draw_sample_hexagons(hexagons, m, zoom_start=zoom)
+    
+    # Draw isolated populations if selected
+    if st.session_state['show_isolated']:
+        m = draw_hexagons(st.session_state['isolated_hex'], m, color="black", opacity=0.6)
         m = draw_sample_hexagons(hexagons, m, zoom_start=zoom)
         
     # Draw barriers if there are any
@@ -184,7 +191,7 @@ def setup_done_ui():
         
     m = add_legend(m)
     folium_static(m, width=800, height=600)
-    st.write(f"Number of isolated populations with no migration route found: {len(st.session_state['isolated_hex'])}")
+    st.write(f"Number of isolated populations: {len(st.session_state['isolated_hex'])}")
     
 
 def main():
