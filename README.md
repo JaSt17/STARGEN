@@ -16,8 +16,8 @@ Before running the tool, ensure you have the following software and libraries in
 1. Clone this repository to your local machine:
 
    ```bash
-   git clone https://github.com/JaSt17/BINP17_TMGB.git
-   cd BINP17_TMGB
+   git@github.com:JaSt17/STARGEN.git
+   cd STARGEN/
    ```
 2. Run the setup script to create a new conda environment and install all necessary packages.
 
@@ -156,13 +156,11 @@ Now, you can explore genetic distances over time using the interactive folium ma
 
 ## Repository Structure
 
-- **0_data**: Holds three xlsx files.
+- **0_data**: Holds the xlsx file.
 
   - `aDNA_30GPs.xlsx`: Contains the combined samples from the AADR and additional samples gathered for this study.
-  - `aDNA_30GPs_AADR.xlsx`: Contains only the AADR dataset samples.
-  - `aDNA_30GPs_new_samples.xlsx`: Contains the new samples gathered for this study.
 
-  Each of these files lists the Genetic ID, the Publication, the Date of the sample, the Locality, the Political entity, the coordinates, the SNPs hit on autosomal targets, and the values for the 30 Admixture components.
+  This file lists the Genetic ID, the Publication, the Date of the sample, the Locality, the Political entity, the coordinates, and the values for the 30 Admixture components.
 - **scr**: Contains all the scripts necessary for the tool.
 
   - `app.py`: Holds the code for the Streamlit application. It allows the interactive usage of the tool.
