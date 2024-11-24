@@ -9,9 +9,9 @@
 columns = ['Genetic ID',
                 'Lat.',
                 'Long.', 
-                'Date mean in BP in years before 1950 CE [OxCal mu for a direct radiocarbon date, and average of range for a contextual date]']
+                'Date_BP']
 # also change the index where the the distance values begins
-index = 9 # Assuming data starts from the 10th column
+index = 7 # Assuming data starts from the 9th column
 #-------------------------------------------------------------------------------------
 
 import pickle
@@ -21,7 +21,7 @@ import pandas as pd
 import numpy as np
 from scipy.spatial.distance import pdist, squareform
 
-def filter_df(df):
+def filter_df(df: pd.DataFrame) -> pd.DataFrame:
     """
     Filters the DataFrame for errors in the latitude and longitude columns.
 
@@ -40,13 +40,14 @@ def filter_df(df):
     return filtered_df
 
 
-def write_sample_list(df, path, columns):
+def write_sample_list(df: pd.DataFrame, path: str, columns: list):
     """
     Writes the samples to a new file.
 
     Parameters:
     - df (pd.DataFrame): The input DataFrame containing the sample data (needs to include 'Genetic ID', 'Lat.', 'Long.', and 'Date mean in BP' columns)
     - path (str): The path to the directory where the file will be saved.
+    - columns (list): The list of columns to be extracted from the DataFrame.
 
     Returns:
     - None
@@ -70,12 +71,14 @@ def write_sample_list(df, path, columns):
             f.write('\t'.join(sample) + '\n')
 
 
-def create_dist_matrix(df, columns, index):
+def create_dist_matrix(df: pd.DataFrame, columns: list, index: int):
     """
     Calculates the Euclidean distance matrix from the samples and writes it to a pickle file.
 
     Parameters:
     - df (pd.DataFrame): The input DataFrame containing 'Genetic ID', 'Lat.', 'Long.', and admixture columns.
+    - columns (list): The list of columns to be extracted from the DataFrame.
+    - index (int): The index of the column where the distance values start.
 
     Returns:
     - None
