@@ -5,6 +5,7 @@ import pandas as pd
 import os
 from vizualize import *
 from func import *
+from easyPrint import EasyPrint
 
 def clear_state():
     """
@@ -188,9 +189,15 @@ def setup_done_ui():
     # Draw barriers if there are any
     if len(st.session_state['barrier_lines']) > 0:
         m = draw_barriers(st.session_state['barrier_lines'], m, threshold=st.session_state['threshold'])
-        
+    
+    # Add the legend to the map
     m = add_legend(m)
-    folium_static(m, width=800, height=600)
+    
+    # Add the download button for the map
+    easy_print = EasyPrint()
+    m.add_child(easy_print)
+    
+    folium_static(m, width=900, height=600)
     st.write(f"Number of isolated populations: {len(st.session_state['isolated_hex'])}")
     
 

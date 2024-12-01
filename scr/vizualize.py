@@ -354,11 +354,6 @@ def add_legend(m):
 
     macro.add_to(m)
     return m
-
-
-    macro = MacroElement()
-    macro._template = Template(template)
-
-    macro.add_to(m)
-    return m
+    
+    
     
