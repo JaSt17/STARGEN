@@ -107,7 +107,7 @@ def draw_hexagons(hexagons, m=None, color='white', zoom_start=1, value=None, opa
         for part in parts:
             polygon = folium.Polygon(
                 locations=part,
-                weight=1,
+                weight=0,
                 color=None,
                 fill_color=color,
                 fill_opacity=opacity,
@@ -121,7 +121,7 @@ def draw_hexagons(hexagons, m=None, color='white', zoom_start=1, value=None, opa
     return m
 
 
-def draw_hexagons_with_values(hex_dict, m=None, zoom_start=1, threshold=0.0, imputed=False):
+def draw_hexagons_with_values(hex_dict, m=None, zoom_start=1, threshold=0.0, imputed=False, opacity=0.5):
     """
     Draws hexagons on a map with values determining their fill color.
 
@@ -134,6 +134,7 @@ def draw_hexagons_with_values(hex_dict, m=None, zoom_start=1, threshold=0.0, imp
         threshold (float, optional): The minimum value required to plot a hexagon. Defaults to 0.0.
         imputed (bool, optional): Whether the values are imputed. Adds "(Imputed)" 
                                     to the tooltip if True. Defaults to False.
+        opacity (float, optional): The fill opacity of the hexagons. Defaults to 0.5.
 
     Returns:
         folium.Map: The map object with the plotted hexagons.
@@ -147,7 +148,7 @@ def draw_hexagons_with_values(hex_dict, m=None, zoom_start=1, threshold=0.0, imp
         if value < threshold:
             continue
         color = mcolors.to_hex(cmap((value + 1)/2))
-        m = draw_hexagons([hexagon], m, color=color, zoom_start=zoom_start, value=value, opacity=0.5, imputed=imputed)
+        m = draw_hexagons([hexagon], m, color=color, zoom_start=zoom_start, value=value, opacity=opacity, imputed=imputed)
 
     return m
 

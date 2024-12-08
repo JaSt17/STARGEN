@@ -1,11 +1,12 @@
 import streamlit as st
 import folium
 from streamlit_folium import folium_static
+from folium.plugins import MousePosition
 import pandas as pd
 import os
 from vizualize import *
 from func import *
-from easyPrint import EasyPrint
+from bigImage import BigImage
 
 def clear_state():
     """
@@ -172,8 +173,8 @@ def setup_done_ui():
         lines = get_distance_lines(st.session_state['new_time_bin'])
         m = draw_barriers(lines, m, threshold=-10.0)
     else:
-        m = draw_hexagons_with_values(st.session_state['barrier_hex'], m, threshold=st.session_state['threshold'])
-        m = draw_hexagons_with_values(st.session_state['imputed_hex'], m, threshold=st.session_state['threshold'], imputed=True)
+        m = draw_hexagons_with_values(st.session_state['barrier_hex'], m, threshold=st.session_state['threshold'], opacity=0.4)
+        m = draw_hexagons_with_values(st.session_state['imputed_hex'], m, threshold=st.session_state['threshold'], imputed=True, opacity=0.4)
         m = draw_sample_hexagons(hexagons, m, zoom_start=zoom)
 
     # Draw migration routes if selected
@@ -190,16 +191,26 @@ def setup_done_ui():
     if len(st.session_state['barrier_lines']) > 0:
         m = draw_barriers(st.session_state['barrier_lines'], m, threshold=st.session_state['threshold'])
     
+    # Add the download button for the map
+    big_image = BigImage()
+    m.add_child(big_image)
+    
+    # Add fullscreen button
+    folium.plugins.Fullscreen(
+    position="bottomleft",
+    title="Expand me",
+    title_cancel="Exit me",
+    force_separate_button=True,
+    ).add_to(m)
+    
+    # Add mouse position to the map
+    MousePosition().add_to(m)
+    
     # Add the legend to the map
     m = add_legend(m)
     
-    # Add the download button for the map
-    easy_print = EasyPrint()
-    m.add_child(easy_print)
-    
     folium_static(m, width=900, height=600)
     st.write(f"Number of isolated populations: {len(st.session_state['isolated_hex'])}")
-    
 
 def main():
     """
