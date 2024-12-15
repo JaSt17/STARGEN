@@ -49,7 +49,7 @@ def initialize_session():
     st.write('**(Spatio-Temporal Analysis and Reconstruction of GENetic Barriers)**')
 
     # Slider for selecting the number of time bins
-    st.session_state['time_bins'] = st.slider('Select a number of time bins', 5, 30, 14, 1)
+    st.session_state['time_bins'] = st.slider('Select a number of time bins', 10, 40, 14, 1)
     # Checkbox to enable same time bin length
     st.session_state['same_age_range'] = st.checkbox('Same age range for each time bin', value=True)
 

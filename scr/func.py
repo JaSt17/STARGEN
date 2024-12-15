@@ -554,11 +554,12 @@ def create_equal_age_groups(df, number_of_bins):
     - age_groups (list): List of DataFrames, each representing a time bin.
     """
     temp_df = df.sort_values('Age')
-    # Leave out the oldest 50 samples for creation of time bin size
-    temp_df = temp_df.iloc[:-50]
+    # Leave out the oldest 144 samples for creation of time bin size so we have a time range of 14000 years
+    temp_df = temp_df.iloc[:-144]
     min_age = temp_df['Age'].min()
     max_age = temp_df['Age'].max()
     age_range = max_age - min_age
+    print(age_range)
     bin_size = int(age_range / number_of_bins)
     age_groups = []
     low_b = min_age
