@@ -49,7 +49,7 @@ def initialize_session():
     st.write('**(Spatio-Temporal Analysis and Reconstruction of GENetic Barriers)**')
 
     # Slider for selecting the number of time bins
-    st.session_state['time_bins'] = st.slider('Select a number of time bins', 10, 40, 14, 1)
+    st.session_state['time_bins'] = st.slider('Select a number of time bins', 10, 40, 28, 1)
     # Checkbox to enable same time bin length
     st.session_state['same_age_range'] = st.checkbox('Same age range for each time bin', value=True)
 
@@ -127,7 +127,7 @@ def setup_done_ui():
     # Slider to choose the threshold for isolated populations
     new_isolated_threshold = st.sidebar.slider('Minimal distance value to be considered as isolated?', 0.0, 4.0, st.session_state['isolated_threshold'], 0.1)
     
-    new_allowed_distance = st.sidebar.slider('Number of hexagons to consider as neighborhood?', 1, 25, 10)
+    new_allowed_distance = st.sidebar.slider('Number of hexagons to consider as neighborhood?', 1, 25, 15)
 
     # Check if the threshold or the selected time bin has changed
     if new_isolated_threshold != st.session_state['isolated_threshold'] or new_selected_time_bin_id != st.session_state['selected_time_bin_id'] or new_allowed_distance != st.session_state['allowed_distance']:
@@ -211,6 +211,10 @@ def setup_done_ui():
     
     folium_static(m, width=900, height=600)
     st.write(f"Number of isolated populations: {len(st.session_state['isolated_hex'])}")
+    
+    # Button to display information about the number of samples in each time bin
+    if st.button("Show table with number of samples per time bin"):
+        st.table(get_samples_per_time_bin(st.session_state['df']))
 
 def main():
     """

@@ -559,7 +559,6 @@ def create_equal_age_groups(df, number_of_bins):
     min_age = temp_df['Age'].min()
     max_age = temp_df['Age'].max()
     age_range = max_age - min_age
-    print(age_range)
     bin_size = int(age_range / number_of_bins)
     age_groups = []
     low_b = min_age
@@ -685,6 +684,28 @@ def write_df(df, path):
     - None
     """
     df.to_csv(path, sep="\t", index=False)
+    
+    
+def get_samples_per_time_bin(df):
+    """
+    Create a new dataframe with the number of samples per time bin.
+    
+    Parameters:
+    - df (pd.DataFrame): DataFrame containing the data.
+    
+    Returns:
+    - new_df (pd.DataFrame): DataFrame with the number of samples per time bin.
+    """
+    # Create a new DataFrame with the number of samples per time bin
+    new_df = df.groupby('AgeGroupTuple')['ID'].count().reset_index()
+    
+    # Rename the columns
+    new_df.columns = ['Time Bin', 'Number of samples']
+    
+    # bring the AgeGroup column in to a more readable format
+    new_df['Time Bin'] = new_df['Time Bin'].apply(rename_times)
+    
+    return new_df
 
 
 def label_samples(path, number_of_bins=20, resolution=2, equally_sized=False):
