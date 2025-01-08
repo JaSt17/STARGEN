@@ -151,6 +151,7 @@ def calc_dist_time_bin(df, dist_matrix=None):
     # Sort the unique age group tuples to process them in chronological order
     time_bins = sorted(df['AgeGroupTuple'].unique())
     averages = {}
+    number_of_samples = {}
 
     # Iterate over each time bin
     for time_bin in time_bins:
@@ -159,6 +160,13 @@ def calc_dist_time_bin(df, dist_matrix=None):
         
         # Get subset of the DataFrame for the current time bin
         time_bin_df = df[df['AgeGroupTuple'] == time_bin]
+        
+        # Get the number of samples in each hexagon
+        samples_in_hex = time_bin_df.groupby(hex_col)['ID'].apply(list).to_dict()
+        samples_in_hex = {hex: len(samples) for hex, samples in samples_in_hex.items()}
+        
+        # Append the number of samples in each hexagon to the dictionary using the time bin label as the key
+        number_of_samples[bin_label] = samples_in_hex
 
         # Get all unique hexagons for the current time bin
         hexagons = time_bin_df[hex_col].unique()
@@ -168,9 +176,10 @@ def calc_dist_time_bin(df, dist_matrix=None):
 
         # Append the calculated average distances to the dictionary using the time bin label as the key
         averages[bin_label] = average_distances
+        
 
     # Return the dictionary with the average distances between neighboring hexagons for each time bin
-    return averages
+    return averages, number_of_samples
 
 
 def get_hexagons(time_bin):

@@ -47,13 +47,15 @@ def split_hexagon_if_needed(hexagon):
         return [tuple(boundary)]
 
 
-def draw_sample_hexagons(hex_dict, m=None, color='grey', zoom_start=1):
+def draw_sample_hexagons(hex_dict, samples_per_hexagon, m=None, color='grey', zoom_start=1):
     """
     Draws hexagons on a map, displaying only the borders for hexagons that contain samples.
 
     Parameters:
         hex_dict (dict): A dictionary where keys are hexagon H3 indices and 
                             values are internal average sample distances.
+        samples_per_hexagon (dict): A dictionary where keys are hexagon H3 indices and 
+                                    values are the number of samples within the hexagon.
         m (folium.Map, optional): An existing Folium map object to plot on. 
                                     If None, a new map is created. Defaults to None.
         color (str, optional): The color of the hexagon borders. Defaults to 'grey'.
@@ -77,6 +79,19 @@ def draw_sample_hexagons(hex_dict, m=None, color='grey', zoom_start=1):
             )
             polygon.add_child(folium.Tooltip(f"Internal scaled genetic distance: {sample_distance}"))
             polygon.add_to(m)
+            
+            if hexagon in samples_per_hexagon:
+                # Calculate the center of the polygon
+                latitudes = [point[0] for point in part]
+                longitudes = [point[1] for point in part]
+                center_lat = sum(latitudes) / len(latitudes)
+                center_lon = sum(longitudes) / len(longitudes)
+                
+                # Add a marker at the center with the number of samples
+                folium.Marker(
+                    location=(center_lat, center_lon),
+                    icon=folium.DivIcon(html=f'<div style="font-size: 12px; color: grey;">{samples_per_hexagon[hexagon]}</div>')
+                ).add_to(m)
 
     return m
 

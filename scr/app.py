@@ -98,7 +98,7 @@ def setup_done_ui():
     
     # Calculate the average distances between neighboring hexagons for each time bin
     if 'time_bins_dist' not in st.session_state:
-        st.session_state['time_bins_dist'] = calc_dist_time_bin(st.session_state['df'], st.session_state['matrix'])
+        st.session_state['time_bins_dist'], st.session_state['samples_per_hexagon'] = calc_dist_time_bin(st.session_state['df'], st.session_state['matrix'])
     
     # Rename the time bins to display them in the dropdown
     time_bins = rename_time_bins(st.session_state['df'])
@@ -111,6 +111,7 @@ def setup_done_ui():
     new_selected_time_bin_id = time_bins.index(selected_time_bin)
     # get the time bin and the hexagons for the selected time bin
     time_bin = st.session_state['time_bins_dist'][selected_time_bin]
+    samples_per_hexagon = st.session_state['samples_per_hexagon'][selected_time_bin]
     # scale the distances to their geographical distance and save the predicted distances to scale the internal distances with it
     time_bin, gen_distances_pred = scale_distances(time_bin, resolution=st.session_state['resolution'])
     # get the hexagons with there internal distance and the distance values for the selected time bin
@@ -175,7 +176,7 @@ def setup_done_ui():
     else:
         m = draw_hexagons_with_values(st.session_state['barrier_hex'], m, threshold=st.session_state['threshold'], opacity=0.4)
         m = draw_hexagons_with_values(st.session_state['imputed_hex'], m, threshold=st.session_state['threshold'], imputed=True, opacity=0.4)
-        m = draw_sample_hexagons(hexagons, m, zoom_start=zoom)
+        m = draw_sample_hexagons(hexagons,samples_per_hexagon, m, zoom_start=zoom)
 
     # Draw migration routes if selected
     if st.session_state['show_migration']:

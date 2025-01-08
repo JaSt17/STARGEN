@@ -16,7 +16,7 @@ Before running the tool, ensure you have the following software and libraries in
 1. Clone this repository to your local machine:
 
    ```bash
-   git@github.com:JaSt17/STARGEN.git
+   git clone git@github.com:JaSt17/STARGEN.git
    cd STARGEN/
    ```
 2. Run the setup script to create a new conda environment and install all necessary packages.
