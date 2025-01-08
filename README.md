@@ -21,6 +21,17 @@ Before running the tool, ensure you have the following software and libraries in
    ```
 2. Run the setup script to create a new conda environment and install all necessary packages.
 
+   You can easily set up the Conda environment using the provided `stargen.yml` file by following these steps:
+
+   ```bash
+   # Create the Conda environment
+   conda env create -f setup/stargen.yml
+   # Activate the environment
+   conda activate stargen
+   ```
+
+   Or you can also run the setup scripts on Linux or Windows:
+
    On Linux run:
 
    ```bash
