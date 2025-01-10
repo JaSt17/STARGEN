@@ -9,7 +9,7 @@ STARGEN is a novel bioinformatics tool designed to visualize genetic distances b
 Before running the tool, ensure you have the following software and libraries installed:
 
 - Python 3.12.2
-- conda 23.7.4
+- conda 24.5.0
 
 ## Installation
 
