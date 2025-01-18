@@ -169,7 +169,7 @@ def setup_done_ui():
 
     # Draw lines or hexagons based on the selected options
     if st.session_state['show_lines']:
-        m = draw_sample_hexagons(hexagons, m, zoom_start=zoom)
+        m = draw_sample_hexagons(hexagons,samples_per_hexagon, m, zoom_start=zoom)
         # use the new time bin to only show distnaces that are in the allowed distance
         lines = get_distance_lines(st.session_state['new_time_bin'])
         m = draw_barriers(lines, m, threshold=-10.0)
@@ -181,12 +181,12 @@ def setup_done_ui():
     # Draw migration routes if selected
     if st.session_state['show_migration']:
         m = draw_migration_for_time_bin(st.session_state['closest_populations'], m)
-        m = draw_sample_hexagons(hexagons, m, zoom_start=zoom)
+        m = draw_sample_hexagons(hexagons,samples_per_hexagon, m, zoom_start=zoom)
     
     # Draw isolated populations if selected
     if st.session_state['show_isolated']:
         m = draw_hexagons(st.session_state['isolated_hex'], m, color="black", opacity=0.6)
-        m = draw_sample_hexagons(hexagons, m, zoom_start=zoom)
+        m = draw_sample_hexagons(hexagons,samples_per_hexagon, m, zoom_start=zoom)
         
     # Draw barriers if there are any
     if len(st.session_state['barrier_lines']) > 0:

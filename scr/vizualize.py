@@ -1,4 +1,4 @@
-from h3 import h3
+import h3
 import folium
 from folium import Map, Element
 from branca.element import Template, MacroElement
@@ -21,26 +21,27 @@ def split_hexagon_if_needed(hexagon):
 
     Returns:
         list: A list containing one or two tuples of coordinates. If the hexagon 
-                does not cross the antimeridian, the list contains one tuple of 
-                coordinates. If it does cross the antimeridian, the list contains 
-                two tuples of coordinates representing the split hexagon.
+              does not cross the antimeridian, the list contains one tuple of 
+              coordinates. If it does cross the antimeridian, the list contains 
+              two tuples of coordinates representing the split hexagon.
     """
-    boundary = h3.h3_to_geo_boundary(hexagon, geo_json=False)
-    longitudes = [lon for _, lon in boundary]
+    # Get the boundary as a list of latitude-longitude pairs
+    boundary = h3.cell_to_boundary(hexagon)
+    longitudes = [lon for lat, lon in boundary]
 
     # Check if the hexagon crosses the antimeridian
     if max(longitudes) - min(longitudes) > 180:
         first_hex = []
         second_hex = []
 
-        # Create two hexagons from the original one
+        # Split the hexagon into two parts
         for lat, lon in boundary:
-            if lon <= 0:
-                first_hex.append((lat, lon + 360))
+            if lon <= 0:  # Western hemisphere
+                first_hex.append((lat, lon + 360))  # Adjust longitude for continuity
                 second_hex.append((lat, lon))
-            else:
+            else:  # Eastern hemisphere
                 first_hex.append((lat, lon))
-                second_hex.append((lat, lon - 360))
+                second_hex.append((lat, lon - 360))  # Adjust longitude for continuity
 
         return [tuple(first_hex), tuple(second_hex)]
     else:
@@ -53,11 +54,11 @@ def draw_sample_hexagons(hex_dict, samples_per_hexagon, m=None, color='grey', zo
 
     Parameters:
         hex_dict (dict): A dictionary where keys are hexagon H3 indices and 
-                            values are internal average sample distances.
+                         values are internal average sample distances.
         samples_per_hexagon (dict): A dictionary where keys are hexagon H3 indices and 
                                     values are the number of samples within the hexagon.
         m (folium.Map, optional): An existing Folium map object to plot on. 
-                                    If None, a new map is created. Defaults to None.
+                                  If None, a new map is created. Defaults to None.
         color (str, optional): The color of the hexagon borders. Defaults to 'grey'.
         zoom_start (int, optional): The initial zoom level of the map. Defaults to 1.
 
@@ -79,14 +80,14 @@ def draw_sample_hexagons(hex_dict, samples_per_hexagon, m=None, color='grey', zo
             )
             polygon.add_child(folium.Tooltip(f"Internal scaled genetic distance: {sample_distance}"))
             polygon.add_to(m)
-            
+
             if hexagon in samples_per_hexagon:
                 # Calculate the center of the polygon
                 latitudes = [point[0] for point in part]
                 longitudes = [point[1] for point in part]
                 center_lat = sum(latitudes) / len(latitudes)
                 center_lon = sum(longitudes) / len(longitudes)
-                
+
                 # Add a marker at the center with the number of samples
                 folium.Marker(
                     location=(center_lat, center_lon),
@@ -103,13 +104,13 @@ def draw_hexagons(hexagons, m=None, color='white', zoom_start=1, value=None, opa
     Parameters:
         hexagons (list): A list of hexagon H3 indices to be plotted.
         m (folium.Map, optional): An existing Folium map object to plot on. 
-                                If None, a new map is created. Defaults to None.
+                                  If None, a new map is created. Defaults to None.
         color (str, optional): The fill color of the hexagons. Defaults to 'white'.
         zoom_start (int, optional): The initial zoom level of the map. Defaults to 1.
         value (str, optional): The value to display in the tooltip. Defaults to None.
         opacity (float, optional): The fill opacity of the hexagons. Defaults to 0.5.
         imputed (bool, optional): Whether the value is imputed. Adds "(Imputed)" 
-                                to the tooltip if True. Defaults to False.
+                                  to the tooltip if True. Defaults to False.
 
     Returns:
         folium.Map: The map object with the plotted hexagons.
@@ -128,7 +129,7 @@ def draw_hexagons(hexagons, m=None, color='white', zoom_start=1, value=None, opa
                 fill_opacity=opacity,
                 fill=True
             )
-            # add imputed to tooltip if imputed is True
+            # Add imputed to tooltip if `imputed` is True
             tooltip_text = f"{value} (Imputed)" if imputed else str(value)
             polygon.add_child(folium.Tooltip(tooltip_text))
             polygon.add_to(m)
@@ -136,19 +137,27 @@ def draw_hexagons(hexagons, m=None, color='white', zoom_start=1, value=None, opa
     return m
 
 
+from matplotlib import cm, colors as mcolors
+
+def get_color_gradient():
+    """
+    Returns a colormap for gradient coloring.
+    """
+    return cm.get_cmap('coolwarm')  # Example colormap
+
 def draw_hexagons_with_values(hex_dict, m=None, zoom_start=1, threshold=0.0, imputed=False, opacity=0.5):
     """
     Draws hexagons on a map with values determining their fill color.
 
     Parameters:
         hex_dict (dict): A dictionary where keys are hexagon H3 indices and 
-                            values are the distance values that determining color and tooltip.
+                         values are the distance values determining color and tooltip.
         m (folium.Map, optional): An existing Folium map object to plot on. 
-                                    If None, a new map is created. Defaults to None.
+                                  If None, a new map is created. Defaults to None.
         zoom_start (int, optional): The initial zoom level of the map. Defaults to 1.
         threshold (float, optional): The minimum value required to plot a hexagon. Defaults to 0.0.
         imputed (bool, optional): Whether the values are imputed. Adds "(Imputed)" 
-                                    to the tooltip if True. Defaults to False.
+                                  to the tooltip if True. Defaults to False.
         opacity (float, optional): The fill opacity of the hexagons. Defaults to 0.5.
 
     Returns:
@@ -156,14 +165,26 @@ def draw_hexagons_with_values(hex_dict, m=None, zoom_start=1, threshold=0.0, imp
     """
     hexagons = hex_dict.keys()
     values = hex_dict.values()
-    
+
     cmap = get_color_gradient()
 
     for hexagon, value in zip(hexagons, values):
         if value < threshold:
             continue
-        color = mcolors.to_hex(cmap((value + 1)/2))
-        m = draw_hexagons([hexagon], m, color=color, zoom_start=zoom_start, value=value, opacity=opacity, imputed=imputed)
+
+        # Normalize the value for the colormap (assuming values are between -1 and 1)
+        normalized_value = (value + 1) / 2
+        color = mcolors.to_hex(cmap(normalized_value))  # Convert to a hex color
+
+        m = draw_hexagons(
+            [hexagon],
+            m,
+            color=color,
+            zoom_start=zoom_start,
+            value=value,
+            opacity=opacity,
+            imputed=imputed
+        )
 
     return m
 
@@ -174,10 +195,10 @@ def draw_barriers(barriers_dict, m=None, zoom_start=1, threshold=0.0):
 
     Parameters:
         barriers_dict (dict): A dictionary where keys are barrier coordinates 
-                                (list of tuples) and values are the distance values 
-                                for determining color and tooltip.
+                              (list of tuples) and values are the distance values 
+                              for determining color and tooltip.
         m (folium.Map, optional): An existing Folium map object to plot on. 
-                                    If None, a new map is created. Defaults to None.
+                                  If None, a new map is created. Defaults to None.
         zoom_start (int, optional): The initial zoom level of the map. Defaults to 1.
         threshold (float, optional): The minimum value required to plot a barrier. Defaults to 0.0.
 
@@ -192,12 +213,22 @@ def draw_barriers(barriers_dict, m=None, zoom_start=1, threshold=0.0):
     for barrier, value in barriers_dict.items():
         if value < threshold:
             continue
-        color = mcolors.to_hex(cmap((value + 1)/2))
-        barrier_coords = list(barrier)
+
+        # Normalize value for colormap
+        normalized_value = (value + 1) / 2  # Adjust based on expected value range
+        color = mcolors.to_hex(cmap(normalized_value))
 
         try:
-            polyline = folium.PolyLine(barrier_coords, color=color, opacity=0.3)
-            polyline.add_child(folium.Tooltip(str(value)))
+            # Create a PolyLine for the barrier
+            polyline = folium.PolyLine(
+                locations=barrier,
+                color=color,
+                weight=3,  # Line thickness
+                opacity=0.7  # Line transparency
+            )
+            # Add a tooltip showing the value
+            tooltip_text = f"Value: {value:.2f}"
+            polyline.add_child(folium.Tooltip(tooltip_text))
             polyline.add_to(m)
         except Exception as e:
             print(f"Error drawing barrier {barrier}: {e}")
@@ -208,11 +239,17 @@ def draw_barriers(barriers_dict, m=None, zoom_start=1, threshold=0.0):
 def draw_migration_for_time_bin(time_bin, m, color="green"):
     """
     Draw migration paths for hexagon pairs within a specified time bin on a given map.
-    
+
+    Parameters:
+        time_bin (dict): A dictionary where keys are tuples of hexagon H3 indices (hex1, hex2)
+                         and values are the migration distances between them.
+        m (folium.Map): An existing Folium map object to add the migration paths to.
+        color (str, optional): The color of the migration paths. Defaults to "green".
+
     Returns:
-    folium.Map: The map object with the migration paths added.
+        folium.Map: The map object with the migration paths added.
     """
-    
+
     def adjust_for_antimeridian(midpoint1, midpoint2):
         """Adjusts midpoints for the antimeridian crossing."""
         if midpoint1[1] < midpoint2[1]:
@@ -222,28 +259,30 @@ def draw_migration_for_time_bin(time_bin, m, color="green"):
             midpoint1_adj = (midpoint1[0], midpoint1[1] - 360)
             midpoint2_adj = (midpoint2[0], midpoint2[1] + 360)
         return [[midpoint1_adj, midpoint2], [midpoint1, midpoint2_adj]]
-    
+
     for pair, distance in time_bin.items():
         hex1, hex2 = pair
-        midpoint1 = h3.h3_to_geo(hex1)
-        midpoint2 = h3.h3_to_geo(hex2)
+        midpoint1 = h3.cell_to_latlng(hex1)  
+        midpoint2 = h3.cell_to_latlng(hex2)  
 
+        # Handle antimeridian crossing
         if abs(midpoint1[1] - midpoint2[1]) > 180:
             lines = adjust_for_antimeridian(midpoint1, midpoint2)
         else:
             lines = [[midpoint1, midpoint2]]
         
+        # Add paths to the map
         for line in lines:
             ant_path = AntPath(
-                locations=line, 
-                color=color, 
-                reverse=True, 
-                dash_array=[10, 20], 
-                delay=800
+                locations=line,
+                color=color,
+                reverse=True,
+                dash_array=[10, 20],  # Dashed path
+                delay=800  # Animation delay
             )
             ant_path.add_child(folium.Tooltip(f'{distance} (Migration Distance)'))
             ant_path.add_to(m)
-    
+
     return m
 
 

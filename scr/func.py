@@ -1,7 +1,7 @@
 import pandas as pd
 import math
 import numpy as np
-from h3 import h3
+import h3
 from collections import defaultdict
 import matplotlib.pyplot as plt
 from scipy.spatial import Delaunay
@@ -82,7 +82,7 @@ def calc_neighbor_dist(hexagons, dist_matrix, time_bin_df, hex_col):
         - dict: A dictionary where keys are hexagon IDs and values are lists of neighboring hexagon IDs.
         """
         # Get the centroid of each hexagon
-        coords = np.array([h3.h3_to_geo(hex) for hex in hexagons])
+        coords = np.array([h3.cell_to_latlng(hex) for hex in hexagons])
         hexagons = np.array(hexagons)
         
         # Calculate the Delaunay triangulation
@@ -223,18 +223,18 @@ def get_isolated_hex_and_barriers(time_bin, hexagons, threshold, allowed_distanc
         """Finds an H3 line between two hexagons, potentially using midpoints if necessary."""
         try:
             # Try to create a direct line first
-            return h3.h3_line(hex_start, hex_end)
+            return h3.grid_path_cells(hex_start, hex_end)
         except:
             if max_iterations <= 0:
                 return None  # Failed to find a line after maximum iterations
             
             # Calculate the midpoint between the centers of the two hexagons
-            center_start = h3.h3_to_geo(hex_start)
-            center_end = h3.h3_to_geo(hex_end)
+            center_start = h3.cell_to_latlng(hex_start)
+            center_end = h3.cell_to_latlng(hex_end)
             midpoint = [(center_start[0] + center_end[0]) / 2, (center_start[1] + center_end[1]) / 2]
             
             # Convert midpoint to the nearest H3 hexagon
-            midpoint_hex = h3.geo_to_h3(midpoint[0], midpoint[1], h3.h3_get_resolution(hex_start))
+            midpoint_hex = h3.latlng_to_cell(midpoint[0], midpoint[1], h3.get_resolution(hex_start))
             
             # Recursively attempt to find lines using the midpoint
             first_half = find_h3_line(hex_start, midpoint_hex, max_iterations - 1)
@@ -256,10 +256,10 @@ def get_isolated_hex_and_barriers(time_bin, hexagons, threshold, allowed_distanc
     for pair, distance in time_bin.items():
         pair = list(pair)
         # Check if the pair are direct neighbors
-        if pair[0] in h3.k_ring_distances(pair[1], 1)[1]:
+        if pair[0] in h3.grid_ring(pair[1], 1)[1]:
             # Get the line between the two hexagons
-            boundary1 = h3.h3_to_geo_boundary(pair[0])
-            boundary2 = h3.h3_to_geo_boundary(pair[1])
+            boundary1 = h3.cell_to_boundary(pair[0])
+            boundary2 = h3.cell_to_boundary(pair[1])
             # Get the pair of dots that the two hexagons share
             shared_boundary = frozenset([x for x in boundary1 if x in boundary2])
             # Add the line and its distance to the dictionary
@@ -289,7 +289,6 @@ def get_isolated_hex_and_barriers(time_bin, hexagons, threshold, allowed_distanc
     isolated_hex = [hex for hex, distances in hex_dist_to_direct_neighbors.items() if all(d >= threshold for d in distances)]
     
     return isolated_hex, barrier_lines, barrier_hex, new_time_bin
-
 
 
 def find_closest_population(df, time_bin_index, isolated_hex, dist_matrix, threshold, gen_distances_pred, resolution):
@@ -401,7 +400,7 @@ def impute_missing_hexagons(barrier_hex, num_runs=5):
         # Iterate through all barrier hexagons
         for hexagon in barrier_hex:
             # Find neighbors that are not in the barrier_hex
-            neighbors = [hex for hex in h3.k_ring(hexagon, 1) if hex not in barrier_hex_set]
+            neighbors = [hex for hex in h3.grid_disk(hexagon, 1) if hex not in barrier_hex_set]
             # Collect distances for these neighbors
             for neighbor in neighbors:
                 new_barrier_hex[neighbor].append(barrier_hex[hexagon])
@@ -450,8 +449,8 @@ def scale_distances(time_bin, exsiting_pred=None, resolution=3):
         if hex2 is None:
             return 1281/(2.65**resolution)
         # else calculate the distance between the two hexagons based on the haversine formula
-        coord1 = h3.h3_to_geo(hex1)
-        coord2 = h3.h3_to_geo(hex2)
+        coord1 = h3.cell_to_latlng(hex1)
+        coord2 = h3.cell_to_latlng(hex2)
         return haversine(coord1, coord2)
 
     # Calculate km distances between the hexagons
@@ -499,8 +498,8 @@ def get_distance_lines(time_bin):
     lines = {}
     for key, value in time_bin.items():
         hex1, hex2 = key
-        coord1 = h3.h3_to_geo(hex1)
-        coord2 = h3.h3_to_geo(hex2)
+        coord1 = h3.cell_to_latlng(hex1)
+        coord2 = h3.cell_to_latlng(hex2)
         # Create a frozenset of coordinates to represent the line
         shared_boundary = frozenset([coord1, coord2])
         lines[shared_boundary] = value
@@ -677,7 +676,7 @@ def assign_hexagon_to_samples(df, resolution):
     - df (pd.DataFrame): DataFrame with an added hexagon column.
     """
     hex_col = 'hex_res_' + str(resolution)
-    df[hex_col] = df.apply(lambda x: h3.geo_to_h3(float(x['Latitude']), float(x['Longitude']), resolution=resolution), axis=1)
+    df[hex_col] = df.apply(lambda x: h3.latlng_to_cell(float(x['Latitude']), float(x['Longitude']), res=resolution), axis=1)
     return df
 
 
