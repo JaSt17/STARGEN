@@ -128,7 +128,7 @@ def setup_done_ui():
     # Slider to choose the threshold for isolated populations
     new_isolated_threshold = st.sidebar.slider('Minimal distance value to be considered as isolated?', 0.0, 4.0, st.session_state['isolated_threshold'], 0.1)
     
-    new_allowed_distance = st.sidebar.slider('Number of hexagons to consider as neighborhood?', 1, 25, 15)
+    new_allowed_distance = st.sidebar.slider('Number of hexagons to consider as neighborhood?', 1, 35, 15)
 
     # Check if the threshold or the selected time bin has changed
     if new_isolated_threshold != st.session_state['isolated_threshold'] or new_selected_time_bin_id != st.session_state['selected_time_bin_id'] or new_allowed_distance != st.session_state['allowed_distance']:
