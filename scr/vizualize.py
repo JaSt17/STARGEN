@@ -48,7 +48,7 @@ def split_hexagon_if_needed(hexagon):
         return [tuple(boundary)]
 
 
-def draw_sample_hexagons(hex_dict, samples_per_hexagon, m=None, color='grey', zoom_start=1):
+def draw_sample_hexagons(hex_dict, samples_per_hexagon, m=None, color='grey', zoom_start=1, show_samples_per_hexagon=True):
     """
     Draws hexagons on a map, displaying only the borders for hexagons that contain samples.
 
@@ -81,7 +81,7 @@ def draw_sample_hexagons(hex_dict, samples_per_hexagon, m=None, color='grey', zo
             polygon.add_child(folium.Tooltip(f"Internal scaled genetic distance: {sample_distance}"))
             polygon.add_to(m)
 
-            if hexagon in samples_per_hexagon:
+            if show_samples_per_hexagon and hexagon in samples_per_hexagon:
                 # Calculate the center of the polygon
                 latitudes = [point[0] for point in part]
                 longitudes = [point[1] for point in part]
