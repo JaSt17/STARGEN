@@ -11,7 +11,7 @@ columns = ['Genetic ID',
                 'Long.', 
                 'Date_BP']
 # also change the index where the the distance values begins
-index = 7 # Assuming data starts from the 9th column
+index = 8 # Assuming data starts from the 9th column
 #-------------------------------------------------------------------------------------
 
 import pickle
