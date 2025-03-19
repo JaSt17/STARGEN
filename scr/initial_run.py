@@ -11,7 +11,7 @@ columns = ['Genetic ID',
                 'Long.', 
                 'Date_BP']
 # also change the index where the the distance values begins
-index = 8 # Assuming data starts from the 9th column
+index = 7 # Assuming data starts from the 9th column
 #-------------------------------------------------------------------------------------
 
 import pickle
@@ -88,7 +88,7 @@ def create_dist_matrix(df: pd.DataFrame, columns: list, index: int):
     lat = df[columns[1]]
     long = df[columns[2]]
     try:
-        admix = df.iloc[:, index:]  # Assuming data starts from the 10th column
+        admix = df.iloc[:, index:]  # Extract the admixture columns
         admix.astype(float)
     except:
         print("There is something wrong with the index you set for the distance values.\nPlease check your provided index in the intial_run.py file.")
