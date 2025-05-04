@@ -152,18 +152,24 @@ This command should automatically open a browser window with the STARGEN applica
 - **Home Screen**: Customize the number of time bins and the resolution of the hexagonal zones. Access additional details through the buttons on the home screen.
 
   ![Home Screen](./img/home_screen.png "Home Screen")
+
 - **Main Screen**: The Sidebar on the main screen provides additional settings to adjust the visualization of genetic distances.
 
   ![Main Screen](./img/main_screen.png "Main Screen")
 
-  - **Display Settings**:
-    - **Which distances should be displayed**: Exclude distant hexagons below a set threshold.
-    - **Isolated populations**: Define the scaled distance value to identify isolated populations and migration routes.
-    - **Migration routes & isolated populations**: Draw possible migration routes and isolated hexagons on the map.
-    - **Distance lines**: Display underlying distance lines for a detailed view.
-    - **Default map window**: Set standard coordinates and zoom level for specific areas of interest.
+### **Display Settings**
 
-Now, you can explore genetic distances over time using the interactive folium map from STARGEN.
+- **Minimal distance value to display**: Exclude distant hexagons below a chosen threshold. Only distances **above** the selected value will be shown on the map.
+- **Minimal distance to define isolation**: Set the minimum distance a hexagon must have to all its neighbors to be considered **isolated**.
+- **Neighborhood size**: Define the number of neighboring hexagons to consider when calculating isolation. Increasing this value broadens the analysis but also increases computation time.
+- **Show sample hexagon counts**: Display the number of samples present within each visible hexagon.
+- **Show possible migration routes**: If isolated populations are detected, draw lines connecting each isolated hexagon to its closest neighbor, suggesting potential migration patterns.
+- **Show isolated populations**: Highlight isolated hexagons as grey hexagons on the map for easier identification.
+- **Show line representation**: Display underlying distance lines between hexagons for a more detailed view of genetic distances.
+- **Default map window**: Set the default map center coordinates and zoom level to focus on specific areas of interest.
+- **Black and white map**: Display the map in black and white to enhance color contrast and pattern visibility.
+
+Now, you can explore **genetic distances over time** using **STARGEN**.
 
 ## Repository Structure
 
@@ -175,6 +181,7 @@ Now, you can explore genetic distances over time using the interactive folium ma
 - **scr**: Contains all the scripts necessary for the tool.
 
   - `app.py`: Holds the code for the Streamlit application. It allows the interactive usage of the tool.
+  - `bigImage.py`: Contains function needed to create hihg resolution images of the map in the tool.
   - `func.py`: Contains all the necessary functions to run the `app.py` script.
   - `initial_run.py`: Script to be run in the initial setup phase to create the distance matrix from the `aDNA_30GPs.xlsx` file.
   - `visualize.py`: Contains all functions used to visualize the hexagons, lines, and legend on the Folium map.
@@ -190,14 +197,10 @@ STARGEN employs several advanced techniques for genetic data analysis, including
 - **LOWESS Curve Fitting**: Scales genetic distances to geographic distances for each time bin.
 - **Neighboring Hexagon Identification**: Identifies and visualizes genetic distances between hexagons.
 
-STARGEN has been validated by identifying known genetic barriers, such as the Bering Sea, and accurately detecting migration routes, such as those influenced by Norse maritime activities.
-
-For detailed methodology and results, refer to the supplementary material and figures included in the manuscript.
+STARGEN has been validated by identifying known genetic barriers. For detailed methodology and results, refer to the supplementary material and figures included in the manuscript.
 
 ## References
 
 A comprehensive list of references is included in the manuscript. Key references include foundational studies on genetic population structure, geographic patterns of genetic variation, and methodologies for spatial genetic analysis.
 
 ---
-
-This README provides detailed instructions for running STARGEN and replicating the results presented in the associated manuscript.
