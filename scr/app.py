@@ -150,7 +150,8 @@ def setup_done_ui():
     # Checkbox to toggle showing sample hexagons
     st.session_state['show_sample_hexagons'] = st.sidebar.checkbox("Show sample hexagons", True)
     # Checkbox to toggle showing possible migration routes
-    st.session_state['show_migration'] = st.sidebar.checkbox("Show possible migration routes", False)
+    # for now this functionality is removed
+    # st.session_state['show_migration'] = st.sidebar.checkbox("Show possible migration routes", False)
     # Checkbox to toggle showing isolated populations
     st.session_state['show_isolated'] = st.sidebar.checkbox("Show isolated populations", False)
     # Checkbox to toggle showing distance lines
@@ -181,9 +182,10 @@ def setup_done_ui():
         m = draw_sample_hexagons(hexagons,samples_per_hexagon, m, zoom_start=zoom, show_samples_per_hexagon=st.session_state['show_sample_hexagons'])
 
     # Draw migration routes if selected
-    if st.session_state['show_migration']:
-        m = draw_migration_for_time_bin(st.session_state['closest_populations'], m)
-        m = draw_sample_hexagons(hexagons,samples_per_hexagon, m, zoom_start=zoom)
+    # for now this functionality is removed
+    #if st.session_state['show_migration']:
+    #    m = draw_migration_for_time_bin(st.session_state['closest_populations'], m)
+    #    m = draw_sample_hexagons(hexagons,samples_per_hexagon, m, zoom_start=zoom)
     
     # Draw isolated populations if selected
     if st.session_state['show_isolated']:

@@ -475,12 +475,13 @@ def scale_distances(time_bin, exsiting_pred=None, resolution=3):
         if km_distance not in gen_distances_pred[:, 0]:
             km_distance = gen_distances_pred[:, 0][np.argmin(np.abs(gen_distances_pred[:, 0] - km_distance))]
         gen_distance = time_bin[pair]
-        gen_distance_pred = gen_distances_pred[gen_distances_pred[:, 0] == km_distance][:, 1][0]
+        gen_distance_pred = abs(gen_distances_pred[gen_distances_pred[:, 0] == km_distance][:, 1][0])
         # check if the predicted distance is 0
         if gen_distance == 0:
             output[pair] = 0
         # else get the log 2 of the ratio of the genetic distance to the predicted genetic distance
         else:
+            print(f"Pair: {pair}, Gen Distance: {gen_distance}, Predicted Gen Distance: {gen_distance_pred}")
             output[pair] = round(math.log2(gen_distance / gen_distance_pred),2)
 
     return output, gen_distances_pred
