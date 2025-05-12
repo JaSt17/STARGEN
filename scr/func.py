@@ -85,6 +85,10 @@ def calc_neighbor_dist(hexagons, dist_matrix, time_bin_df, hex_col):
         coords = np.array([h3.cell_to_latlng(hex) for hex in hexagons])
         hexagons = np.array(hexagons)
         
+        if len(coords) < 3:
+            # If there are less than 3 hexagons, return an empty dictionary
+            return {}
+        
         # Calculate the Delaunay triangulation
         tri = Delaunay(coords)
 
