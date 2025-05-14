@@ -153,7 +153,8 @@ def setup_done_ui():
     # for now this functionality is removed
     # st.session_state['show_migration'] = st.sidebar.checkbox("Show possible migration routes", False)
     # Checkbox to toggle showing isolated populations
-    st.session_state['show_isolated'] = st.sidebar.checkbox("Show isolated populations", False)
+    # for now this functionality is removed
+    # st.session_state['show_isolated'] = st.sidebar.checkbox("Show isolated populations", False)
     # Checkbox to toggle showing distance lines
     st.session_state['show_lines'] = st.sidebar.checkbox("Show line representation", False)
 
@@ -188,9 +189,10 @@ def setup_done_ui():
     #    m = draw_sample_hexagons(hexagons,samples_per_hexagon, m, zoom_start=zoom)
     
     # Draw isolated populations if selected
-    if st.session_state['show_isolated']:
-        m = draw_hexagons(st.session_state['isolated_hex'], m, color="black", opacity=0.6)
-        m = draw_sample_hexagons(hexagons,samples_per_hexagon, m, zoom_start=zoom)
+    # for now this functionality is removed
+    #if st.session_state['show_isolated']:
+    #    m = draw_hexagons(st.session_state['isolated_hex'], m, color="black", opacity=0.6)
+    #    m = draw_sample_hexagons(hexagons,samples_per_hexagon, m, zoom_start=zoom)
         
     # Draw barriers if there are any
     if len(st.session_state['barrier_lines']) > 0:
@@ -215,7 +217,8 @@ def setup_done_ui():
     m = add_legend(m)
     
     folium_static(m, width=900, height=600)
-    st.write(f"Number of isolated populations: {len(st.session_state['isolated_hex'])}")
+    # for now this functionality is removed
+    #st.write(f"Number of isolated populations: {len(st.session_state['isolated_hex'])}")
     
     # Button to display information about the number of samples in each time bin
     if st.button("Show table with number of samples per time bin"):
