@@ -551,8 +551,12 @@ def rename_times(time_bin):
             year = year - 1950
             year_str = f"{year} BC"
         renamed_years.append(year_str)
+        
+    # flip the order of the renamed years
+    renamed_years.reverse()
     
     return " - ".join(renamed_years)
+
 
 def create_equal_age_groups(df, number_of_bins):
     """
