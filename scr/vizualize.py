@@ -48,13 +48,14 @@ def split_hexagon_if_needed(hexagon):
         return [tuple(boundary)]
 
 
-def draw_sample_hexagons(hex_dict, samples_per_hexagon, m=None, color='grey', zoom_start=1, show_samples_per_hexagon=True):
+def draw_sample_hexagons(hex_dict, annotation_df, samples_per_hexagon, m=None, color='grey', zoom_start=1, show_samples_per_hexagon=True):
     """
     Draws hexagons on a map, displaying only the borders for hexagons that contain samples.
 
     Parameters:
         hex_dict (dict): A dictionary where keys are hexagon H3 indices and 
                          values are internal average sample distances.
+        annotation_df (pandas.DataFrame): A DataFrame containing annotations for the hexagons.
         samples_per_hexagon (dict): A dictionary where keys are hexagon H3 indices and 
                                     values are the number of samples within the hexagon.
         m (folium.Map, optional): An existing Folium map object to plot on. 
@@ -80,6 +81,27 @@ def draw_sample_hexagons(hex_dict, samples_per_hexagon, m=None, color='grey', zo
             )
             polygon.add_child(folium.Tooltip(f"Internal scaled genetic distance: {sample_distance}"))
             polygon.add_to(m)
+            
+            # get the annotation for the hexagon from the last column of the DataFrame
+            last_column = annotation_df.columns[-2]
+            data_text = None
+            if hexagon in annotation_df[last_column].values:
+                samples_in_hexagon = annotation_df[annotation_df[last_column] == hexagon]
+                samples_in_hexagon = samples_in_hexagon.iloc[:, :4]  # keep only first 4 columns
+                
+                # Wrap table in a scrollable div
+                table_html = samples_in_hexagon.to_html(classes='table table-striped', index=False, border=0)
+                scrollable_html = f'''
+                <div style="max-height: 200px; overflow-y: auto;">
+                    {table_html}
+                </div>
+                '''
+
+                data_text = scrollable_html
+
+            if data_text:
+                popup = folium.Popup(data_text, max_width=500)
+                polygon.add_child(popup)
 
             if show_samples_per_hexagon and hexagon in samples_per_hexagon:
                 # Calculate the center of the polygon
@@ -131,7 +153,7 @@ def draw_hexagons(hexagons, m=None, color='white', zoom_start=1, value=None, opa
             )
             # Add imputed to tooltip if `imputed` is True
             tooltip_text = f"{value} (Imputed)" if imputed else str(value)
-            polygon.add_child(folium.Tooltip(tooltip_text))
+            polygon.add_child(folium.Tooltip(tooltip_text))                
             polygon.add_to(m)
 
     return m

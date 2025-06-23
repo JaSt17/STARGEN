@@ -101,7 +101,7 @@ def setup_done_ui():
         st.session_state['time_bins_dist'], st.session_state['samples_per_hexagon'] = calc_dist_time_bin(st.session_state['df'], st.session_state['matrix'])
     
     # Rename the time bins to display them in the dropdown
-    time_bins = rename_time_bins(st.session_state['df'])
+    time_bins, time_bin_dict = rename_time_bins(st.session_state['df'])
     selected_time_bin = st.selectbox("Time Bin", options=time_bins)
 
     if 'selected_time_bin_id' not in st.session_state:
@@ -142,6 +142,8 @@ def setup_done_ui():
         st.session_state['isolated_threshold'] = new_isolated_threshold
         # save the new selected time bin id
         st.session_state['selected_time_bin_id'] = new_selected_time_bin_id
+        # save only all samples for the selected time bin
+        st.session_state['selected_df'] = st.session_state['df'][st.session_state['df']['AgeGroupTuple'] == time_bin_dict[selected_time_bin]]
         # find the closest populations to the isolated populations
         st.session_state['closest_populations'], st.session_state['isolated_hex'] = find_closest_population(
             st.session_state['df'], st.session_state['selected_time_bin_id'], st.session_state['isolated_hex'], 
@@ -173,26 +175,26 @@ def setup_done_ui():
 
     # Draw lines or hexagons based on the selected options
     if st.session_state['show_lines']:
-        m = draw_sample_hexagons(hexagons,samples_per_hexagon, m, zoom_start=zoom, show_samples_per_hexagon=st.session_state['show_sample_hexagons'])
+        m = draw_sample_hexagons(hexagons, st.session_state['selected_df'], samples_per_hexagon, m, zoom_start=zoom, show_samples_per_hexagon=st.session_state['show_sample_hexagons'])
         # use the new time bin to only show distnaces that are in the allowed distance
         lines = get_distance_lines(st.session_state['new_time_bin'])
         m = draw_barriers(lines, m, threshold=-10.0)
     else:
         m = draw_hexagons_with_values(st.session_state['barrier_hex'], m, threshold=st.session_state['threshold'], opacity=0.4)
         m = draw_hexagons_with_values(st.session_state['imputed_hex'], m, threshold=st.session_state['threshold'], imputed=True, opacity=0.4)
-        m = draw_sample_hexagons(hexagons,samples_per_hexagon, m, zoom_start=zoom, show_samples_per_hexagon=st.session_state['show_sample_hexagons'])
+        m = draw_sample_hexagons(hexagons,  st.session_state['selected_df'], samples_per_hexagon, m, zoom_start=zoom, show_samples_per_hexagon=st.session_state['show_sample_hexagons'])
 
     # Draw migration routes if selected
     # for now this functionality is removed
     #if st.session_state['show_migration']:
     #    m = draw_migration_for_time_bin(st.session_state['closest_populations'], m)
-    #    m = draw_sample_hexagons(hexagons,samples_per_hexagon, m, zoom_start=zoom)
+    #    m = draw_sample_hexagons(hexagons, st.session_state['selected_df'], samples_per_hexagon, m, zoom_start=zoom)
     
     # Draw isolated populations if selected
     # for now this functionality is removed
     #if st.session_state['show_isolated']:
     #    m = draw_hexagons(st.session_state['isolated_hex'], m, color="black", opacity=0.6)
-    #    m = draw_sample_hexagons(hexagons,samples_per_hexagon, m, zoom_start=zoom)
+    #    m = draw_sample_hexagons(hexagons, st.session_state['selected_df'], samples_per_hexagon, m, zoom_start=zoom)
         
     # Draw barriers if there are any
     if len(st.session_state['barrier_lines']) > 0:

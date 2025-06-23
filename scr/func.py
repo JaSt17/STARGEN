@@ -527,10 +527,9 @@ def rename_time_bins(df):
     time_bins = sorted(df['AgeGroupTuple'].unique())
     
     # Rename the time bins using the rename_times function
-    renamed_bins = [rename_times(time_bin) for time_bin in time_bins]
+    renamed_bins, name_dict = rename_times_list(time_bins, return_mapping=True)
     
-    return renamed_bins
-
+    return renamed_bins, name_dict
 
 def rename_times(time_bin):
     """
@@ -556,6 +555,40 @@ def rename_times(time_bin):
     renamed_years.reverse()
     
     return " - ".join(renamed_years)
+
+
+def rename_times_list(time_bins, return_mapping=False):
+    """
+    Renames time bins into more readable BC/AD format, converting years relative to 1950.
+
+    Parameters:
+    - time_bins (list of tuple): A list of (start_year, end_year) tuples.
+    - return_mapping (bool): If True, also returns a dictionary mapping renamed bins to original bins.
+
+    Returns:
+    - list: List of renamed time bin strings.
+    - dict (optional): Dictionary mapping renamed strings to original tuples.
+    """
+    renamed_bins = []
+    mapping = {}
+
+    for time_bin in time_bins:
+        renamed_years = []
+        for year in time_bin:
+            if year < 1950:
+                year_str = f"{1950 - year} AD"
+            else:
+                year_str = f"{year - 1950} BC"
+            renamed_years.append(year_str)
+
+        renamed_years.reverse()
+        renamed_str = " - ".join(renamed_years)
+        renamed_bins.append(renamed_str)
+
+        if return_mapping:
+            mapping[renamed_str] = time_bin
+
+    return (renamed_bins, mapping) if return_mapping else renamed_bins
 
 
 def create_equal_age_groups(df, number_of_bins):
@@ -758,6 +791,6 @@ def label_samples(path, number_of_bins=20, resolution=2, equally_sized=False):
     new_df = assign_hexagon_to_samples(new_df, resolution=resolution)
     
     # Write the DataFrame to a file
-    write_df(new_df, f'{path}/0_data/Ancient_samples_with_time_hexagon.txt')
+    write_df(new_df, f'{path}/0_data/Ancient_samples_with_time_hexagon.csv')
     
     return new_df
