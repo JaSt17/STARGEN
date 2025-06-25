@@ -718,6 +718,8 @@ def assign_hexagon_to_samples(df, resolution):
     """
     hex_col = 'hex_res_' + str(resolution)
     df[hex_col] = df.apply(lambda x: h3.latlng_to_cell(float(x['Latitude']), float(x['Longitude']), res=resolution), axis=1)
+    df["hex_center_lat"] = df[hex_col].apply(lambda x: h3.cell_to_latlng(x)[0])
+    df["hex_center_lon"] = df[hex_col].apply(lambda x: h3.cell_to_latlng(x)[1])
     return df
 
 
